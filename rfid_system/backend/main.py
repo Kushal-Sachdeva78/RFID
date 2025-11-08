@@ -131,8 +131,6 @@ def _lookup_person(uid: str) -> Dict[str, Any] | None:
 
 @app.post("/api/logs", response_model=EventResponse)
 def register_event(event_in: EventIn) -> EventResponse:
-    logs = _load_json(LOG_PATH, [])
-
     person_details = event_in.person or _lookup_person(event_in.uid)
 
     event = AttendanceEvent(
@@ -147,9 +145,10 @@ def register_event(event_in: EventIn) -> EventResponse:
         },
     )
 
-    logs.append(json.loads(event.json()))
-    _save_json(LOG_PATH, logs)
-
+    with _log_lock:
+        logs = _load_json(LOG_PATH, [])
+        logs.append(json.loads(event.json()))
+        _save_json(LOG_PATH, logs)
     return EventResponse(ok=True, event=event)
 
 
