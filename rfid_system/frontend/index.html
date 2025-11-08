@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESP32 RFID Attendance Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>ESP32 RFID Attendance Dashboard</h1>
+      <p>Monitor the scans handled by the embedded reader in real time.</p>
+    </header>
+
+    <main>
+      <section id="connection">
+        <h2>Backend Connection</h2>
+        <form id="config-form">
+          <label>
+            API Base URL
+            <input type="url" id="api-url" placeholder="http://localhost:8000" required />
+          </label>
+          <button type="submit">Connect</button>
+          <span id="health-status" class="status">Not connected</span>
+        </form>
+      </section>
+
+      <section id="manual-entry">
+        <h2>Manual RFID Entry</h2>
+        <p>
+          Use this form to simulate an RFID scan from your laptop. Events are stored in the
+          backend log and mirrored to Firebase for later review.
+        </p>
+        <form id="manual-form">
+          <div class="grid">
+            <label>
+              UID
+              <input
+                type="text"
+                id="manual-uid"
+                placeholder="e.g. AA BB CC DD"
+                autocomplete="off"
+                required
+              />
+            </label>
+            <label>
+              Status
+              <select id="manual-status">
+                <option value="accepted">Accepted</option>
+                <option value="late">Late</option>
+                <option value="duplicate">Duplicate</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </label>
+            <label>
+              Location
+              <input type="text" id="manual-location" placeholder="manual_station" />
+            </label>
+          </div>
+          <label class="notes">
+            Notes (optional)
+            <textarea id="manual-notes" rows="2" placeholder="Reason for manual entry"></textarea>
+          </label>
+          <button type="submit">Record Event</button>
+          <span id="manual-message" class="message" aria-live="polite"></span>
+        </form>
+      </section>
+
+      <section id="roster">
+        <div class="section-header">
+          <h2>Roster</h2>
+          <button id="refresh-roster" type="button">Refresh</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>UID</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Transport</th>
+            </tr>
+          </thead>
+          <tbody id="roster-body"></tbody>
+        </table>
+      </section>
+
+      <section id="events">
+        <div class="section-header">
+          <h2>Attendance Events</h2>
+          <button id="refresh-events" type="button">Refresh</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp (UTC)</th>
+              <th>UID</th>
+              <th>Status</th>
+              <th>Location</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="events-body"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Update the API URL to match where <code>main.py</code> is running and the
+        ESP32 firmware will deliver events in real time.
+      </p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
