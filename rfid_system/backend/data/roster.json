@@ -1,0 +1,26 @@
+[
+  {
+    "uid": "B3 4B 6F 21",
+    "name": "Kushal Sachdeva",
+    "role": "Student",
+    "transport": "walk"
+  },
+  {
+    "uid": "A3 3F 7D 21",
+    "name": "Ms Aggarwal",
+    "role": "Teacher",
+    "transport": "bus"
+  },
+  {
+    "uid": "93 CE 78 21",
+    "name": "Ms Singh",
+    "role": "Teacher",
+    "transport": "car"
+  },
+  {
+    "uid": "03 BF 82 21",
+    "name": "Ms Bakshi",
+    "role": "Principal",
+    "transport": "car"
+  }
+]
