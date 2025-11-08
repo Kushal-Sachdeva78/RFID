@@ -25,47 +25,6 @@
         </form>
       </section>
 
-      <section id="manual-entry">
-        <h2>Manual RFID Entry</h2>
-        <p>
-          Use this form to simulate an RFID scan from your laptop. Events are stored in the
-          backend log and mirrored to Firebase for later review.
-        </p>
-        <form id="manual-form">
-          <div class="grid">
-            <label>
-              UID
-              <input
-                type="text"
-                id="manual-uid"
-                placeholder="e.g. AA BB CC DD"
-                autocomplete="off"
-                required
-              />
-            </label>
-            <label>
-              Status
-              <select id="manual-status">
-                <option value="accepted">Accepted</option>
-                <option value="late">Late</option>
-                <option value="duplicate">Duplicate</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </label>
-            <label>
-              Location
-              <input type="text" id="manual-location" placeholder="manual_station" />
-            </label>
-          </div>
-          <label class="notes">
-            Notes (optional)
-            <textarea id="manual-notes" rows="2" placeholder="Reason for manual entry"></textarea>
-          </label>
-          <button type="submit">Record Event</button>
-          <span id="manual-message" class="message" aria-live="polite"></span>
-        </form>
-      </section>
-
       <section id="roster">
         <div class="section-header">
           <h2>Roster</h2>
@@ -111,6 +70,6 @@
       </p>
     </footer>
 
-    <script type="module" src="app.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>
