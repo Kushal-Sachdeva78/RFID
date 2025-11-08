@@ -58,9 +58,7 @@ Each submission will:
 
 1. POST the event to the backend (`POST /api/logs`).
 2. Refresh the dashboard tables so you can confirm the entry.
-3. Update the **SPI Screen Preview** card with the student's photo, transport mode, and a colour-coded
-   timetable for the current week.
-4. (Optional) Mirror the event to Firebase Firestore if you configure Firebase in the next step.
+3. (Optional) Mirror the event to Firebase Firestore if you configure Firebase in the next step.
 
 Use this workflow to prototype the UI without the ESP32 connected.
 
