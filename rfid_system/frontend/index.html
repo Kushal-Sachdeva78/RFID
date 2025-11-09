@@ -25,6 +25,102 @@
         </form>
       </section>
 
+      <section id="manual-entry">
+        <h2>Manual RFID Entry</h2>
+        <p>
+          Use this form to simulate an RFID scan from your laptop. Events are stored in the
+          backend log (when available), mirrored to Firebase, and always reflected in the SPI
+          preview so you can test without hardware.
+        </p>
+        <form id="manual-form">
+          <div class="grid">
+            <label>
+              UID
+              <input
+                type="text"
+                id="manual-uid"
+                placeholder="e.g. AA BB CC DD"
+                autocomplete="off"
+                required
+              />
+            </label>
+            <label>
+              Status
+              <select id="manual-status">
+                <option value="accepted">Accepted</option>
+                <option value="late">Late</option>
+                <option value="duplicate">Duplicate</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </label>
+            <label>
+              Location
+              <input type="text" id="manual-location" placeholder="manual_station" />
+            </label>
+          </div>
+          <details class="advanced">
+            <summary>Optional display details</summary>
+            <div class="grid optional">
+              <label>
+                Display name
+                <input type="text" id="manual-name" placeholder="Student or staff name" />
+              </label>
+              <label>
+                Role
+                <input type="text" id="manual-role" placeholder="Teacher / Student" />
+              </label>
+              <label>
+                Class
+                <input type="text" id="manual-class" placeholder="e.g. Grade 10 - Section B" />
+              </label>
+              <label>
+                Transport
+                <input type="text" id="manual-transport" placeholder="e.g. Bus" />
+              </label>
+              <label>
+                Photo URL
+                <input type="url" id="manual-photo" placeholder="https://example.com/photo.jpg" />
+              </label>
+            </div>
+          </details>
+          <label class="notes">
+            Notes (optional)
+            <textarea id="manual-notes" rows="2" placeholder="Reason for manual entry"></textarea>
+          </label>
+          <button type="submit">Record Event</button>
+          <span id="manual-message" class="message" aria-live="polite"></span>
+        </form>
+      </section>
+
+      <section id="last-scan">
+        <h2>SPI Screen Preview</h2>
+        <p class="hint">
+          The panel below mirrors what the SPI TFT would show after the latest scan.
+        </p>
+        <div class="screen">
+          <div class="identity">
+            <img id="scan-photo" alt="Profile photo" src="" hidden />
+            <div class="text">
+              <h3 id="scan-name">Waiting for the first scan</h3>
+              <p id="scan-role">Role / Class</p>
+              <p id="scan-transport">Transport mode</p>
+              <p id="scan-time">Timestamp</p>
+            </div>
+          </div>
+          <div class="schedule">
+            <h4>This Week</h4>
+            <table>
+              <thead>
+                <tr id="week-days"></tr>
+              </thead>
+              <tbody>
+                <tr id="week-status"></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <section id="roster">
         <div class="section-header">
           <h2>Roster</h2>
@@ -36,6 +132,7 @@
               <th>UID</th>
               <th>Name</th>
               <th>Role</th>
+              <th>Class</th>
               <th>Transport</th>
             </tr>
           </thead>
@@ -70,6 +167,6 @@
       </p>
     </footer>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>

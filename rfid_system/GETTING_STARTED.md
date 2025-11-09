@@ -48,26 +48,35 @@ The backend will listen on `http://127.0.0.1:8000`. Keep this terminal running.
 2. Browse to `http://localhost:5173`.
 3. Inside the **Backend Connection** card, enter the backend URL (`http://127.0.0.1:8000`) and click
    **Connect**. The roster and attendance tables will load from the JSON data bundled with the repo.
+4. Testing without the backend? Leave it stopped—the dashboard will note the offline status but still
+   accepts manual scans so you can demo the SPI screen preview locally.
 
 ---
 
 ## 3. Simulate RFID Scans Manually
 
 The **Manual RFID Entry** form lets you type any UID (for example `AA BB CC DD`) to simulate a scan.
+Expand the **Optional display details** drawer to override the name, role, class, transport mode, and
+photo that appear on the SPI preview.
+
 Each submission will:
 
 1. POST the event to the backend (`POST /api/logs`).
 2. Refresh the dashboard tables so you can confirm the entry.
-3. (Optional) Mirror the event to Firebase Firestore if you configure Firebase in the next step.
+3. Update the **SPI Screen Preview** card with the student's photo, transport mode, and a colour-coded
+   timetable for the current week.
+4. (Optional) Mirror the event to Firebase Firestore if you configure Firebase in the next step.
 
-Use this workflow to prototype the UI without the ESP32 connected.
+Use this workflow to prototype the UI without the ESP32 connected. If the backend is offline, the
+dashboard keeps the scan locally, highlights it in the events table, and updates the SPI preview so you
+can keep testing.
 
 > 💡 **Tip:** The backend understands the same statuses that the firmware sends. Choose the
 > value that matches what you want to test:
-> - `accepted` – normal entry/exit records.
+> - `accepted` – normal entry/exit records (shows a green checkmark in the weekly grid).
 > - `duplicate` – repeat scans that should not mark attendance again.
-> - `late` – submissions that include lateness details from the ESP32.
-> - `rejected` – scans from unregistered cards.
+> - `late` – submissions that include lateness details from the ESP32 (shows a yellow dash).
+> - `rejected` – scans from unregistered cards (the day stays red with an **X**).
 >
 > You can also add optional notes in the form to see how annotations appear in the events
 > table and Firebase.
