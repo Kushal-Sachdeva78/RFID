@@ -87,14 +87,13 @@ Once the PCB design files (`.sch`, `.brd`, `.gerber`) are uploaded, they’ll ap
 
 ---
 
-## 💻 Code (Coming Soon)
+## 💻 Code
 
-> The firmware will be uploaded soon.  
-> It will handle:
-> - RFID scanning  
-> - Firebase authentication  
-> - Attendance and transport logic  
-> - Screen display updates  
+- **Main.ino** – the ESP32 firmware to flash with Arduino IDE/PlatformIO. It drives the SPI screen,
+  buzzer, RFID reader, and posts scans to the backend.
+- **rfid_system/backend** – a FastAPI service that stores roster data and attendance logs in JSON.
+- **rfid_system/frontend** – a static dashboard that mirrors the SPI screen, records manual scans, and
+  can log events to Firebase.
 
 ---
 
