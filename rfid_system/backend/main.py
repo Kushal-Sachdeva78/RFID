@@ -50,18 +50,10 @@ class AttendanceEvent(BaseModel):
 
 class EventIn(BaseModel):
     uid: str
-    status: str = Field("accepted", description="Defaults to 'accepted' for manual submissions.")
+    status: str
     person: Dict[str, Any] | None = None
     lateness: Dict[str, Any] | None = None
     reader_location: str | None = "main_gate"
-    manual: bool = Field(
-        False,
-        description="True when the event was created from the dashboard instead of the ESP32.",
-    )
-    notes: str | None = Field(
-        None,
-        description="Optional free-form notes to include alongside manual submissions.",
-    )
 
 
 class EventResponse(BaseModel):
@@ -119,36 +111,23 @@ def get_logs() -> Dict[str, List[AttendanceEvent]]:
     return {"events": [AttendanceEvent(**event) for event in logs]}
 
 
-def _lookup_person(uid: str) -> Dict[str, Any] | None:
-    """Return the roster entry for the provided UID if one exists."""
-
-    roster = _load_json(ROSTER_PATH, [])
-    for person in roster:
-        if person.get("uid") == uid:
-            return person
-    return None
-
-
 @app.post("/api/logs", response_model=EventResponse)
 def register_event(event_in: EventIn) -> EventResponse:
-    person_details = event_in.person or _lookup_person(event_in.uid)
+    logs = _load_json(LOG_PATH, [])
 
     event = AttendanceEvent(
         uid=event_in.uid,
         status=event_in.status,
         reader_location=event_in.reader_location or "main_gate",
         details={
-            "person": person_details,
+            "person": event_in.person,
             "lateness": event_in.lateness,
-            "manual": event_in.manual,
-            "notes": event_in.notes,
         },
     )
 
-    with _log_lock:
-        logs = _load_json(LOG_PATH, [])
-        logs.append(json.loads(event.json()))
-        _save_json(LOG_PATH, logs)
+    logs.append(json.loads(event.json()))
+    _save_json(LOG_PATH, logs)
+
     return EventResponse(ok=True, event=event)
 
 

@@ -62,6 +62,16 @@ Each submission will:
 
 Use this workflow to prototype the UI without the ESP32 connected.
 
+> 💡 **Tip:** The backend understands the same statuses that the firmware sends. Choose the
+> value that matches what you want to test:
+> - `accepted` – normal entry/exit records.
+> - `duplicate` – repeat scans that should not mark attendance again.
+> - `late` – submissions that include lateness details from the ESP32.
+> - `rejected` – scans from unregistered cards.
+>
+> You can also add optional notes in the form to see how annotations appear in the events
+> table and Firebase.
+
 ---
 
 ## 4. Configure Firebase (Optional)

@@ -56,59 +56,6 @@ input {
   border: none;
 }
 
-input,
-select,
-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  background: rgba(15, 23, 42, 0.6);
-  color: inherit;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
-}
-
-textarea {
-  resize: vertical;
-}
-
-.grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  margin-bottom: 1rem;
-}
-
-.notes {
-  display: block;
-  margin-bottom: 1rem;
-}
-
-.notes textarea {
-  margin-top: 0.25rem;
-}
-
-.message {
-  display: inline-block;
-  margin-left: 1rem;
-  font-size: 0.9rem;
-}
-
-.message.success {
-  color: #22c55e;
-}
-
-.message.error {
-  color: #f87171;
-}
-
 button {
   background: #38bdf8;
   color: #0f172a;
