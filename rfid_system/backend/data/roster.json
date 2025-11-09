@@ -3,32 +3,24 @@
     "uid": "B3 4B 6F 21",
     "name": "Kushal Sachdeva",
     "role": "Student",
-    "transport": "walk",
-    "class_name": "Grade 10 - A",
-    "photo_url": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"
+    "transport": "walk"
   },
   {
     "uid": "A3 3F 7D 21",
     "name": "Ms Aggarwal",
     "role": "Teacher",
-    "transport": "bus",
-    "class_name": "Math Department",
-    "photo_url": "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=200&q=80"
+    "transport": "bus"
   },
   {
     "uid": "93 CE 78 21",
     "name": "Ms Singh",
     "role": "Teacher",
-    "transport": "car",
-    "class_name": "Science Department",
-    "photo_url": "https://images.unsplash.com/photo-1544723795-3fbace2035b6?auto=format&fit=crop&w=200&q=80"
+    "transport": "car"
   },
   {
     "uid": "03 BF 82 21",
     "name": "Ms Bakshi",
     "role": "Principal",
-    "transport": "car",
-    "class_name": "Administration",
-    "photo_url": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80"
+    "transport": "car"
   }
 ]
