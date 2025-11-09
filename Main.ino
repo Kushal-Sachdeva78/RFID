@@ -1,3 +1,5 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Adafruit_GFX.h>
