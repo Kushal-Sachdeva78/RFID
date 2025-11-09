@@ -87,14 +87,13 @@ Once the PCB design files (`.sch`, `.brd`, `.gerber`) are uploaded, they’ll ap
 
 ---
 
-## 💻 Code (Coming Soon)
+## 💻 Code
 
-> The firmware will be uploaded soon.  
-> It will handle:
-> - RFID scanning  
-> - Firebase authentication  
-> - Attendance and transport logic  
-> - Screen display updates  
+- **Main.ino** – the ESP32 firmware to flash with Arduino IDE/PlatformIO. It drives the SPI screen,
+  buzzer, RFID reader, and posts scans to the backend.
+- **rfid_system/backend** – a FastAPI service that stores roster data and attendance logs in JSON.
+- **rfid_system/frontend** – a static dashboard that mirrors the SPI screen, records manual scans, and
+  can log events to Firebase.
 
 ---
 
@@ -113,5 +112,22 @@ Aiming to make **Vasant Valley School** safer, smarter, and more efficient throu
 ---
 
 ## 👤 Developed By
-**Kushal Sachdeva**  
-Vasant Valley School  
+**Kushal Sachdeva**
+Vasant Valley School
+
+---
+
+## 📘 Software Setup Notes
+
+Firmware for the ESP32 lives in `Main.ino`. The supporting dashboard and local data service are
+inside the `rfid_system/` folder. To run the software pieces on a laptop (without flashing the
+microcontroller), follow the step-by-step instructions in
+[`rfid_system/GETTING_STARTED.md`](rfid_system/GETTING_STARTED.md). That guide covers:
+
+- Installing Python dependencies and starting the local backend service.
+- Launching the dashboard in a browser.
+- Typing RFID UIDs manually to see roster lookups and attendance logs update in real time.
+- Connecting the dashboard to Firebase, including the Firestore security rules to paste into the
+  Firebase console.
+
+Use that document whenever you need to revisit the setup or reconfigure the environment.
