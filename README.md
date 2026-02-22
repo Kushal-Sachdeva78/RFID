@@ -5,7 +5,7 @@ This project aims to make attendance marking, late tracking, and gate verificati
 
 ---
 
-## 🧩 Overview
+## Overview
 
 The system replaces manual processes currently used for:
 - Daily student attendance on Veracross (handled manually by class teachers)
@@ -17,7 +17,7 @@ Instead, it enables **RFID-based automated entry/exit tracking** linked to a **F
 
 ---
 
-## 🚨 Problem
+## Problem
 
 - Students currently wait in a “late line” where teachers manually check names and mark strikes for lateness.  
 - Attendance is taken manually each morning by class teachers on Veracross.  
@@ -26,7 +26,7 @@ Instead, it enables **RFID-based automated entry/exit tracking** linked to a **F
 
 ---
 
-## 💡 Solution
+## Solution
 
 A tamperproof system using **RFID entry and exit scanners** integrated with a **Firebase database**, allowing:
 - Automatic attendance marking when students tap their ID cards.
@@ -37,7 +37,7 @@ A tamperproof system using **RFID entry and exit scanners** integrated with a **
 
 ---
 
-## ⚙️ What the System Does
+## What the System Does
 
 - Students and teachers tap their existing **RFID ID cards** on entry and exit.  
 - The ESP32 connects directly to Firebase to record:
@@ -50,7 +50,7 @@ A tamperproof system using **RFID entry and exit scanners** integrated with a **
 
 ---
 
-## 🛠️ Hardware Setup
+## Hardware Setup
 
 | Component | Purpose |
 |------------|----------|
@@ -62,7 +62,7 @@ A tamperproof system using **RFID entry and exit scanners** integrated with a **
 
 ---
 
-## 🧠 Database
+##  Database
 
 - The system uses **Google Firebase** for real-time data synchronization.
 - Stores:
@@ -74,7 +74,7 @@ A tamperproof system using **RFID entry and exit scanners** integrated with a **
 
 ---
 
-## 🧾 PCB Details
+## PCB Details
 
 The PCB includes:
 - ESP32 microcontroller sockets  
@@ -87,7 +87,7 @@ Once the PCB design files (`.sch`, `.brd`, `.gerber`) are uploaded, they’ll ap
 
 ---
 
-## 💻 Code
+## Code
 
 - **Main.ino** – the ESP32 firmware to flash with Arduino IDE/PlatformIO. It drives the SPI screen,
   buzzer, RFID reader, and posts scans to the backend.
@@ -97,7 +97,7 @@ Once the PCB design files (`.sch`, `.brd`, `.gerber`) are uploaded, they’ll ap
 
 ---
 
-## 🧰 Requirements
+## Requirements
 
 - Students and teachers must bring their ID cards daily.
 - Guards will handle morning scanning duty.
@@ -105,19 +105,19 @@ Once the PCB design files (`.sch`, `.brd`, `.gerber`) are uploaded, they’ll ap
 
 ---
 
-## 🏫 Project Vision
+## Project Vision
 
 Aiming to make **Vasant Valley School** safer, smarter, and more efficient through student-led innovation — eliminating wasted time, paperwork, and unsafe exits with technology.
 
 ---
 
-## 👤 Developed By
+## Developed By
 **Kushal Sachdeva**
 Vasant Valley School
 
 ---
 
-## 📘 Software Setup Notes
+## Software Setup Notes
 
 Firmware for the ESP32 lives in `Main.ino`. The supporting dashboard and local data service are
 inside the `rfid_system/` folder. To run the software pieces on a laptop (without flashing the
