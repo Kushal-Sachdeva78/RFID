@@ -44,8 +44,8 @@ A tamperproof system using **RFID entry and exit scanners** integrated with a **
   - Entry time
   - Mode of transport
   - Lateness status
-- Guards (bhaiyas) can verify permissions instantly from a **display screen**.
-- Students forgetting ID cards can manually sign in at the office (and receive a strike).  
+- Guards can verify permissions instantly from a **display screen**.
+- Students forgetting ID cards can manually sign in at the office. 
 - On 3 strikes in a learning cycle, a mail is sent to class teachers.
 
 ---
