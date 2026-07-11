@@ -131,3 +131,7 @@ microcontroller), follow the step-by-step instructions in
   Firebase console.
 
 Use that document whenever you need to revisit the setup or reconfigure the environment.
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
