@@ -1,137 +1,53 @@
-# RFID Entry–Exit System for Vasant Valley School
+# RFID Entry-Exit System for Vasant Valley School
 
-An RFID-based attendance and security system designed to automate **student and teacher entry/exit** using existing ID cards.  
-This project aims to make attendance marking, late tracking, and gate verification **faster, paperless, and tamperproof**, while ensuring student safety and accountability.
+A working prototype of an RFID-based attendance and entry-exit system built around the school's existing ID cards: ESP32 firmware with an RC522 reader and TFT status display, a custom KiCad PCB, a FastAPI backend, and a live web dashboard with optional Firebase mirroring.
 
----
+![Firmware](https://img.shields.io/badge/Firmware-ESP32%20%2B%20RC522-blue)
+![Backend](https://img.shields.io/badge/Backend-FastAPI-teal)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-## Overview
+## Motivation
 
-The system replaces manual processes currently used for:
-- Daily student attendance on Veracross (handled manually by class teachers)
-- Manual late marking lines every morning
-- Paper-based sign-out sheets for student exit
-- Manual teacher attendance registers
+At Vasant Valley School today, attendance is marked manually by class teachers, latecomers wait in a morning "late line" for manual strike marking, student exits run on paper sign-out sheets, and teachers sign in on paper registers. This project prototypes that replacement: students and teachers tap their existing RFID ID cards on entry, and the system records who arrived, when, whether they were late, and how they travel.
 
-Instead, it enables **RFID-based automated entry/exit tracking** linked to a **Firebase database**.
+## What is in this repo
 
----
+| Component | Path | What it does |
+| --- | --- | --- |
+| ESP32 firmware | `Main.ino` | Reads RC522 card taps, matches the UID against a roster, and renders a status card (colored initials tile, weekly grid, ON TIME / LATE / already checked in / unknown card) on a 320x240 ILI9341 TFT, with buzzer feedback. Lateness is computed against a configurable cutoff, with bus riders exempted. |
+| Backend service | `rfid_system/backend` | A FastAPI REST API (`/api/health`, `/api/roster`, `/api/logs`) that stores roster data and attendance logs as JSON. |
+| Web dashboard | `rfid_system/frontend` | A static browser dashboard that mirrors the TFT screen, supports manual UID entry for forgotten cards, polls the backend for live events, buffers offline, and can mirror manual scans to Firebase Firestore. |
+| PCB design | `RFID KICAD/` | Full KiCad schematic and board layout integrating the ESP32 DevKit V1, RFID reader header, display headers, buzzer, power switch, and battery holder, with exported Gerber fabrication files in `RFID KICAD/RFID_PCB/`. |
 
-## Problem
-
-- Students currently wait in a “late line” where teachers manually check names and mark strikes for lateness.  
-- Attendance is taken manually each morning by class teachers on Veracross.  
-- Students are sometimes able to **leave school without permission** or fake entries on exit sheets.  
-- Teacher sign-ins are done on **paper sheets**, wasting time and resources.  
-
----
-
-## Solution
-
-A tamperproof system using **RFID entry and exit scanners** integrated with a **Firebase database**, allowing:
-- Automatic attendance marking when students tap their ID cards.
-- Instant lateness detection (even by a second).
-- Automatic strike tracking — on 3 strikes, the class teacher is informed.
-- Gate-side verification for exit — showing if a student is authorized to leave (walk, car, or bus).
-- Teacher attendance logging via the same system.
-
----
-
-## What the System Does
-
-- Students and teachers tap their existing **RFID ID cards** on entry and exit.  
-- The ESP32 connects directly to Firebase to record:
-  - Entry time
-  - Mode of transport
-  - Lateness status
-- Guards can verify permissions instantly from a **display screen**.
-- Students forgetting ID cards can manually sign in at the office. 
-- On 3 strikes in a learning cycle, a mail is sent to class teachers.
-
----
-
-## Hardware Setup
+## Hardware
 
 | Component | Purpose |
-|------------|----------|
-| **ESP32** | Wi-Fi enabled microcontroller for database communication |
-| **RC522 RFID Module** | Scans ID cards |
-| **TFT / LCD Screen** | Displays messages for lateness and mode of transport |
-| **Custom PCB** | Integrates all components into a single compact module |
-| **3D Printed Case** | Protects and houses the hardware, designed by me |
+| --- | --- |
+| ESP32 DevKit V1 | Wi-Fi capable microcontroller running the firmware |
+| RC522 RFID module (SPI) | Scans ID cards |
+| ILI9341 320x240 TFT | Shows the scan result, lateness status, and transport mode |
+| Buzzer | Audible scan feedback |
+| Custom PCB | Integrates all components into a single module (KiCad sources and Gerbers in this repo) |
+| 3D printed case | Protects and houses the hardware (design files not in this repo) |
 
----
+## Getting started
 
-##  Database
+To run the software stack on a laptop without flashing hardware, follow [`rfid_system/GETTING_STARTED.md`](rfid_system/GETTING_STARTED.md). It covers installing the Python dependencies, starting the FastAPI backend, serving the dashboard, simulating card taps by typing UIDs, and connecting the dashboard to Firebase.
 
-- The system uses **Google Firebase** for real-time data synchronization.
-- Stores:
-  - Student & teacher IDs
-  - Entry/exit timestamps
-  - Mode of transport
-  - Strike counts
-- Connected directly via ESP32’s Wi-Fi capabilities.
+To run the hardware demo, flash `Main.ino` to an ESP32 with the Arduino IDE or PlatformIO, with the MFRC522, Adafruit GFX, and Adafruit ILI9341 libraries installed.
 
----
+## Status and roadmap
 
-## PCB Details
+Implemented now: the standalone firmware demo (hardcoded roster, simulated clock), the backend and dashboard flow with Firestore mirroring for manual scans, and the complete PCB design.
 
-The PCB includes:
-- ESP32 microcontroller sockets  
-- RC522 connection header  
-- Screen header for I2C/TFT pins  
-- Buzzer and power control  
-- USB and VIN power lines for standalone operation  
+Planned next, in line with the full design: posting scans from the ESP32 to the backend over Wi-Fi, real-time clock synchronization, automatic strike tracking with teacher notifications at three strikes, and gate-side exit authorization (walk, car, or bus).
 
-Once the PCB design files (`.sch`, `.brd`, `.gerber`) are uploaded, they’ll appear here.
+## Developed by
 
----
+**Kushal Sachdeva**, Vasant Valley School
 
-## Code
-
-- **Main.ino** – the ESP32 firmware to flash with Arduino IDE/PlatformIO. It drives the SPI screen,
-  buzzer, RFID reader, and posts scans to the backend.
-- **rfid_system/backend** – a FastAPI service that stores roster data and attendance logs in JSON.
-- **rfid_system/frontend** – a static dashboard that mirrors the SPI screen, records manual scans, and
-  can log events to Firebase.
-
----
-
-## Requirements
-
-- Students and teachers must bring their ID cards daily.
-- Guards will handle morning scanning duty.
-- Backup manual entry at the office for missing cards.
-
----
-
-## Project Vision
-
-Aiming to make **Vasant Valley School** safer, smarter, and more efficient through student-led innovation — eliminating wasted time, paperwork, and unsafe exits with technology.
-
----
-
-## Developed By
-**Kushal Sachdeva**
-Vasant Valley School
-
----
-
-## Software Setup Notes
-
-Firmware for the ESP32 lives in `Main.ino`. The supporting dashboard and local data service are
-inside the `rfid_system/` folder. To run the software pieces on a laptop (without flashing the
-microcontroller), follow the step-by-step instructions in
-[`rfid_system/GETTING_STARTED.md`](rfid_system/GETTING_STARTED.md). That guide covers:
-
-- Installing Python dependencies and starting the local backend service.
-- Launching the dashboard in a browser.
-- Typing RFID UIDs manually to see roster lookups and attendance logs update in real time.
-- Connecting the dashboard to Firebase, including the Firestore security rules to paste into the
-  Firebase console.
-
-Use that document whenever you need to revisit the setup or reconfigure the environment.
+More of my work: [github.com/Kushal-Sachdeva78](https://github.com/Kushal-Sachdeva78), including [autonomous RoboCup soccer robots](https://github.com/Kushal-Sachdeva78/VVS-Ballers-RoboCup) and [EnerJee](https://github.com/Kushal-Sachdeva78/EnerJee), a renewable energy planning platform.
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
