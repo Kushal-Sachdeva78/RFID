@@ -2,9 +2,9 @@
 
 A working prototype of an RFID-based attendance and entry-exit system built around the school's existing ID cards: ESP32 firmware with an RC522 reader and TFT status display, a custom KiCad PCB, a FastAPI backend, and a live web dashboard with optional Firebase mirroring.
 
-![Firmware](https://img.shields.io/badge/Firmware-ESP32%20%2B%20RC522-blue)
-![Backend](https://img.shields.io/badge/Backend-FastAPI-teal)
-![License](https://img.shields.io/badge/License-MIT-green)
+[![Firmware](https://img.shields.io/badge/Firmware-ESP32%20%2B%20RC522-blue)](Main.ino)
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-teal)](rfid_system/backend)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## Motivation
 
