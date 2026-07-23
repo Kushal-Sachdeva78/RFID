@@ -1,0 +1,22 @@
+[
+  {
+    "class_section": "Grade 9 - A",
+    "teacher_name": "Teacher Alpha (sample)",
+    "teacher_email": "grade9a.teacher@example.com"
+  },
+  {
+    "class_section": "Grade 9 - B",
+    "teacher_name": "Teacher Bravo (sample)",
+    "teacher_email": "grade9b.teacher@example.com"
+  },
+  {
+    "class_section": "Grade 10 - A",
+    "teacher_name": "Teacher Charlie (sample)",
+    "teacher_email": "grade10a.teacher@example.com"
+  },
+  {
+    "class_section": "Grade 10 - B",
+    "teacher_name": "Teacher Delta (sample)",
+    "teacher_email": "grade10b.teacher@example.com"
+  }
+]

@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 import config
 import main
+from notifier import FakeNotifier, get_notifier
 from storage import Storage
 
 
@@ -24,8 +25,14 @@ def storage(tmp_path):
 
 
 @pytest.fixture
-def client(storage):
+def fake_notifier():
+    return FakeNotifier()
+
+
+@pytest.fixture
+def client(storage, fake_notifier):
     main.app.dependency_overrides[main.get_storage] = lambda: storage
+    main.app.dependency_overrides[get_notifier] = lambda: fake_notifier
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()

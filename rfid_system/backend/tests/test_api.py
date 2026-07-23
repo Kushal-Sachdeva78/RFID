@@ -55,7 +55,10 @@ def test_roster_rejects_missing_required_field(client):
 def test_post_log_looks_up_person_from_roster(client):
     client.post("/api/roster", json=SAMPLE_ROSTER)
 
-    res = client.post("/api/logs", json={"uid": "AA 11 BB 22", "status": "accepted"})
+    res = client.post(
+        "/api/logs",
+        json={"uid": "AA 11 BB 22", "status": "accepted", "timestamp": "2026-07-08T07:30:00+05:30"},
+    )
     assert res.status_code == 200
     body = res.json()
     assert body["ok"] is True

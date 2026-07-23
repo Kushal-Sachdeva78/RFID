@@ -51,6 +51,7 @@ class Settings:
     late_hour: int
     late_minute: int
     learning_cycles: tuple[LearningCycle, ...]
+    strike_threshold: int
     debounce_seconds: int
     # Maps an API key to a role. Empty means auth is disabled (dev default).
     # Configure with RFID_API_KEYS, a JSON object of {"key": "role"}.
@@ -118,6 +119,7 @@ def load_settings() -> Settings:
         late_hour=_env_int("RFID_LATE_HOUR", 8),
         late_minute=_env_int("RFID_LATE_MINUTE", 5),
         learning_cycles=_default_cycles(),
+        strike_threshold=_env_int("RFID_STRIKE_THRESHOLD", 3),
         debounce_seconds=_env_int("RFID_SCAN_DEBOUNCE_SECONDS", 60),
         api_keys=_load_api_keys(),
     )

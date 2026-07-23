@@ -22,7 +22,13 @@ from models import (
     RosterPerson,
     RosterResponse,
 )
-from services import authorization_for, classify_direction
+from notifier import Notifier, StrikeNotification, get_notifier
+from services import (
+    authorization_for,
+    classify_direction,
+    compute_lateness,
+    late_days_in_cycle,
+)
 from storage import Storage
 
 _storage = Storage(settings.data_dir)
@@ -88,13 +94,61 @@ def _lookup_person(storage: Storage, uid: str) -> dict[str, Any] | None:
     return None
 
 
-def _record_event(event_in: EventIn, storage: Storage, response: Response) -> EventResponse:
+def _teacher_for(storage: Storage, class_section: str | None) -> dict[str, Any] | None:
+    if not class_section:
+        return None
+    for teacher in storage.class_teachers.all():
+        if teacher.get("class_section") == class_section:
+            return teacher
+    return None
+
+
+def _maybe_notify_strike(
+    storage: Storage,
+    notifier: Notifier,
+    uid: str,
+    person_details: dict[str, Any] | None,
+    when,
+) -> None:
+    """Notify the class teacher when a student reaches the strike threshold.
+
+    A notifier failure must never break attendance recording, so it is guarded.
+    """
+    count, cycle, late_dates = late_days_in_cycle(storage.logs.all(), uid, when)
+    if cycle is None or count != settings.strike_threshold:
+        return
+
+    class_section = (person_details or {}).get("class_name")
+    teacher = _teacher_for(storage, class_section)
+    notification = StrikeNotification(
+        student_name=(person_details or {}).get("name") or uid,
+        student_uid=uid,
+        class_section=class_section,
+        cycle_name=cycle.name,
+        strike_count=count,
+        late_dates=late_dates,
+        teacher_name=(teacher or {}).get("teacher_name"),
+        teacher_email=(teacher or {}).get("teacher_email"),
+        created_at=settings.now(),
+    )
+    try:
+        notifier.notify(notification)
+    except Exception:  # noqa: BLE001 - recording attendance must not fail here
+        pass
+
+
+def _record_event(
+    event_in: EventIn, storage: Storage, response: Response, notifier: Notifier
+) -> EventResponse:
     """Shared ingest path for both device scans and manual office entries.
 
-    Computes entry/exit direction and the guard-facing transport authorization
-    on the backend, so the ESP32 stays thin and this logic is unit tested.
+    Computes entry/exit direction, second-resolution lateness, and the
+    guard-facing transport authorization on the backend, so the ESP32 stays thin
+    and this logic is unit tested. Three late arrivals in a learning cycle notify
+    the class teacher.
     """
     person_details = event_in.person or _lookup_person(storage, event_in.uid)
+    transport = (person_details or {}).get("transport")
 
     # Use the device's clock when it sends one; otherwise stamp on arrival. A
     # naive timestamp is assumed to be in the configured local timezone.
@@ -105,19 +159,23 @@ def _record_event(event_in: EventIn, storage: Storage, response: Response) -> Ev
 
     prior_events = storage.logs.all()
     status = event_in.status
+    lateness_info = event_in.lateness
     direction: str | None
     if status == "rejected":
-        # Unknown card: no direction and no authorization.
+        # Unknown card: no direction, no lateness, no authorization.
         direction = None
     else:
         direction, is_duplicate = classify_direction(prior_events, event_in.uid, effective_time)
         if is_duplicate:
             status = "duplicate"
+        elif direction == "entry":
+            # Lateness applies to arrival. The backend is authoritative.
+            late, minutes = compute_lateness(effective_time, transport)
+            status = "late" if late else "accepted"
+            lateness_info = {"late": late, "minutes": minutes}
 
-    transport = None
     authorization = None
     if direction == "exit":
-        transport = (person_details or {}).get("transport")
         authorization = authorization_for(transport)
 
     event_kwargs: dict[str, Any] = {
@@ -127,7 +185,7 @@ def _record_event(event_in: EventIn, storage: Storage, response: Response) -> Ev
         "direction": direction,
         "details": {
             "person": person_details,
-            "lateness": event_in.lateness,
+            "lateness": lateness_info,
             "manual": event_in.manual,
             "recorded_by": event_in.recorded_by,
             "notes": event_in.notes,
@@ -139,6 +197,9 @@ def _record_event(event_in: EventIn, storage: Storage, response: Response) -> Ev
     event = AttendanceEvent(**event_kwargs)
     storage.logs.append(event.model_dump(mode="json"))
 
+    if status == "late" and direction == "entry":
+        _maybe_notify_strike(storage, notifier, event_in.uid, person_details, effective_time)
+
     # Expose direction and authorization as headers too, so the thin firmware
     # can show a guard banner without parsing JSON.
     response.headers["X-Direction"] = direction or ""
@@ -148,17 +209,20 @@ def _record_event(event_in: EventIn, storage: Storage, response: Response) -> Ev
         ok=True,
         event=event,
         direction=direction,
-        transport=transport,
+        transport=transport if direction == "exit" else None,
         authorization=authorization,
     )
 
 
 @app.post("/api/logs", response_model=EventResponse)
 def register_event(
-    event_in: EventIn, response: Response, storage: Storage = Depends(get_storage)
+    event_in: EventIn,
+    response: Response,
+    storage: Storage = Depends(get_storage),
+    notifier: Notifier = Depends(get_notifier),
 ) -> EventResponse:
     """Device scan ingest. Open, since the ESP32 has no key (by design)."""
-    return _record_event(event_in, storage, response)
+    return _record_event(event_in, storage, response, notifier)
 
 
 @app.post("/api/manual-entry", response_model=EventResponse)
@@ -167,6 +231,7 @@ def manual_entry(
     response: Response,
     role: str | None = Depends(require_role("office", "teacher", "admin")),
     storage: Storage = Depends(get_storage),
+    notifier: Notifier = Depends(get_notifier),
 ) -> EventResponse:
     """Office-side fallback for a forgotten or lost card.
 
@@ -176,7 +241,7 @@ def manual_entry(
     event_in.manual = True
     if not event_in.recorded_by:
         event_in.recorded_by = role or "staff"
-    return _record_event(event_in, storage, response)
+    return _record_event(event_in, storage, response, notifier)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,9 @@ build/
 # Firmware secrets (Wi-Fi credentials, backend URL). Commit only the example.
 arduino_secrets.h
 
+# Runtime notification log written by the default notifier backend.
+notifications.log
+
 # OS cruft
 .DS_Store
 Thumbs.db

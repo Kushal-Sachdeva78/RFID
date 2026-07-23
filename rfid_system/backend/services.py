@@ -32,6 +32,56 @@ def _local_date(dt: datetime) -> date:
     return _as_aware(dt).astimezone(settings.tz).date()
 
 
+def compute_lateness(timestamp: datetime, transport: str | None) -> tuple[bool, int]:
+    """Return (is_late, minutes_late) against the configured cutoff.
+
+    Second resolution: an arrival one second past the cutoff is late. Bus riders
+    are exempt because the bus arrival time is not their fault.
+    """
+    if transport and transport.strip().lower() == "bus":
+        return False, 0
+    local = _as_aware(timestamp).astimezone(settings.tz)
+    cutoff_seconds = settings.late_hour * 3600 + settings.late_minute * 60
+    now_seconds = local.hour * 3600 + local.minute * 60 + local.second
+    if now_seconds > cutoff_seconds:
+        return True, (now_seconds - cutoff_seconds) // 60
+    return False, 0
+
+
+def late_days_in_cycle(
+    events: list[dict[str, Any]], uid: str, when: datetime
+):
+    """Count distinct late arrival days for a student in the cycle of `when`.
+
+    Returns (count, cycle, sorted_dates). A strike is a late day, so multiple
+    late reads on one date count once.
+    """
+    cycle = settings.cycle_for(_local_date(_as_aware(when)))
+    if cycle is None:
+        return 0, None, []
+
+    late_dates: set[str] = set()
+    for event in events:
+        if event.get("uid") != uid:
+            continue
+        if event.get("status") != "late":
+            continue
+        if (event.get("direction") or "entry") != "entry":
+            continue
+        raw_ts = event.get("timestamp")
+        if not raw_ts:
+            continue
+        try:
+            event_dt = _as_aware(datetime.fromisoformat(raw_ts))
+        except (ValueError, TypeError):
+            continue
+        day = _local_date(event_dt)
+        if cycle.contains(day):
+            late_dates.add(day.isoformat())
+
+    return len(late_dates), cycle, sorted(late_dates)
+
+
 def classify_direction(
     prior_events: list[dict[str, Any]], uid: str, timestamp: datetime
 ) -> tuple[str, bool]:
