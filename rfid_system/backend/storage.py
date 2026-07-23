@@ -94,6 +94,9 @@ class Storage:
         self.class_teachers: CollectionStore = JsonCollectionStore(
             self._data_dir / "class_teachers.json"
         )
+        # Laptop asset register and borrow records.
+        self.laptops: CollectionStore = JsonCollectionStore(self._data_dir / "laptops.json")
+        self.loans: CollectionStore = JsonCollectionStore(self._data_dir / "loans.json")
 
     @property
     def data_dir(self) -> pathlib.Path:
@@ -102,6 +105,6 @@ class Storage:
     def ensure_initialised(self) -> None:
         """Create empty collection files if they do not exist yet."""
         self._data_dir.mkdir(parents=True, exist_ok=True)
-        for store in (self.roster, self.logs, self.class_teachers):
+        for store in (self.roster, self.logs, self.class_teachers, self.laptops, self.loans):
             if isinstance(store, JsonCollectionStore) and not store.path.exists():
                 store.replace([])

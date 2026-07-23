@@ -488,9 +488,241 @@ refreshRosterBtn.addEventListener("click", loadRoster);
 refreshEventsBtn.addEventListener("click", loadEvents);
 manualForm.addEventListener("submit", submitManualEvent);
 
+// --- Laptop borrowing ---------------------------------------------------------
+const laptopMessage = document.getElementById("laptop-message");
+const loansBody = document.getElementById("loans-body");
+const outstandingBody = document.getElementById("outstanding-body");
+const laptopsBody = document.getElementById("laptops-body");
+const laptopRegisterForm = document.getElementById("laptop-register-form");
+const laptopAssetCodeInput = document.getElementById("laptop-asset-code");
+const loanRequestForm = document.getElementById("loan-request-form");
+const loanStudentUidInput = document.getElementById("loan-student-uid");
+const refreshLaptopsBtn = document.getElementById("refresh-laptops");
+
+function staffHeaders(extra = {}) {
+  const headers = { ...extra };
+  const key = (manualApiKeyInput?.value || localStorage.getItem("rfid_api_key") || "").trim();
+  if (key) headers["X-API-Key"] = key;
+  return headers;
+}
+
+function showLaptopMessage(text, kind = "success") {
+  laptopMessage.textContent = text;
+  laptopMessage.className = `message ${kind}`;
+}
+
+async function readError(res) {
+  let detail = `status ${res.status}`;
+  try {
+    const body = await res.json();
+    if (body.detail) detail = body.detail;
+  } catch (error) {
+    /* ignore */
+  }
+  return detail;
+}
+
+async function loanAction(path, options = {}) {
+  try {
+    const res = await fetch(`${apiBase}${path}`, {
+      method: options.method || "POST",
+      headers: staffHeaders(options.body ? { "Content-Type": "application/json" } : {}),
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    if (!res.ok) throw new Error(await readError(res));
+    showLaptopMessage(options.success || "Done.");
+    await refreshLaptopSection();
+    return true;
+  } catch (error) {
+    showLaptopMessage(error.message, "error");
+    return false;
+  }
+}
+
+function loanActionButtons(loan) {
+  const id = loan.id;
+  if (loan.state === "requested") {
+    return `<button data-loan-approve="${id}">Approve</button> <button data-loan-deny="${id}">Deny</button>`;
+  }
+  if (loan.state === "approved") {
+    return `<input type="text" data-issue-input="${id}" placeholder="asset code" size="10" /> <button data-loan-issue="${id}">Issue</button>`;
+  }
+  if (loan.state === "issued") {
+    return `<button data-loan-return="${id}">Return</button>`;
+  }
+  return "-";
+}
+
+async function loadLoans() {
+  try {
+    const res = await fetch(`${apiBase}/api/loans`);
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const loans = (await res.json()).loans;
+    const openStates = ["requested", "approved", "issued"];
+    loans.sort((a, b) => openStates.indexOf(b.state) - openStates.indexOf(a.state));
+    loansBody.innerHTML = "";
+    if (loans.length === 0) {
+      loansBody.innerHTML = `<tr><td colspan="4">No loan requests yet.</td></tr>`;
+      return;
+    }
+    loans.forEach((loan) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${loan.student_name || loan.student_uid}</td>
+        <td>${loan.state}</td>
+        <td>${loan.asset_code || "-"}</td>
+        <td>${loanActionButtons(loan)}</td>
+      `;
+      loansBody.appendChild(row);
+    });
+  } catch (error) {
+    loansBody.innerHTML = `<tr><td colspan="4">Failed to load loans: ${error.message}</td></tr>`;
+  }
+}
+
+async function loadOutstanding() {
+  try {
+    const res = await fetch(`${apiBase}/api/loans/outstanding`);
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const items = (await res.json()).outstanding;
+    outstandingBody.innerHTML = "";
+    if (items.length === 0) {
+      outstandingBody.innerHTML = `<tr><td colspan="4">No units are out.</td></tr>`;
+      return;
+    }
+    items.forEach((item) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${item.student_name || item.student_uid}</td>
+        <td><code>${item.asset_code}</code></td>
+        <td>${item.held_for || "-"}</td>
+        <td>${item.issued_by || "-"}</td>
+      `;
+      outstandingBody.appendChild(row);
+    });
+  } catch (error) {
+    outstandingBody.innerHTML = `<tr><td colspan="4">Failed to load: ${error.message}</td></tr>`;
+  }
+}
+
+async function loadLaptops() {
+  try {
+    const res = await fetch(`${apiBase}/api/laptops`);
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const laptops = (await res.json()).laptops;
+    laptopsBody.innerHTML = "";
+    if (laptops.length === 0) {
+      laptopsBody.innerHTML = `<tr><td colspan="3">No laptops registered.</td></tr>`;
+      return;
+    }
+    laptops.forEach((laptop) => {
+      const code = laptop.asset_code;
+      let actions = "-";
+      if (laptop.status === "available") {
+        actions = `<button data-laptop-repair="${code}">Mark repair</button> <button data-laptop-retire="${code}">Retire</button>`;
+      } else if (laptop.status === "under_repair") {
+        actions = `<button data-laptop-available="${code}">Mark available</button>`;
+      }
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><code>${code}</code></td>
+        <td>${laptop.status}</td>
+        <td>${actions}</td>
+      `;
+      laptopsBody.appendChild(row);
+    });
+  } catch (error) {
+    laptopsBody.innerHTML = `<tr><td colspan="3">Failed to load laptops: ${error.message}</td></tr>`;
+  }
+}
+
+async function refreshLaptopSection() {
+  await Promise.all([loadLoans(), loadOutstanding(), loadLaptops()]);
+}
+
+loansBody.addEventListener("click", (event) => {
+  const data = event.target.dataset || {};
+  if (data.loanApprove) {
+    loanAction(`/api/loans/${data.loanApprove}/approve`, { success: "Approved." });
+  } else if (data.loanDeny) {
+    loanAction(`/api/loans/${data.loanDeny}/deny`, { success: "Denied." });
+  } else if (data.loanReturn) {
+    loanAction(`/api/loans/${data.loanReturn}/return`, { success: "Return recorded." });
+  } else if (data.loanIssue) {
+    const input = loansBody.querySelector(`[data-issue-input="${data.loanIssue}"]`);
+    const code = (input?.value || "").trim();
+    if (!code) {
+      showLaptopMessage("Enter an asset code to issue.", "error");
+      return;
+    }
+    loanAction(`/api/loans/${data.loanIssue}/issue`, {
+      body: { asset_code: code },
+      success: `Issued ${code}.`,
+    });
+  }
+});
+
+laptopsBody.addEventListener("click", (event) => {
+  const data = event.target.dataset || {};
+  if (data.laptopRepair) {
+    loanAction(`/api/laptops/${encodeURIComponent(data.laptopRepair)}`, {
+      method: "PATCH",
+      body: { status: "under_repair" },
+      success: "Marked under repair.",
+    });
+  } else if (data.laptopRetire) {
+    loanAction(`/api/laptops/${encodeURIComponent(data.laptopRetire)}`, {
+      method: "PATCH",
+      body: { status: "retired" },
+      success: "Retired.",
+    });
+  } else if (data.laptopAvailable) {
+    loanAction(`/api/laptops/${encodeURIComponent(data.laptopAvailable)}`, {
+      method: "PATCH",
+      body: { status: "available" },
+      success: "Marked available.",
+    });
+  }
+});
+
+laptopRegisterForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const code = laptopAssetCodeInput.value.trim();
+  if (!code) return;
+  loanAction("/api/laptops", { body: { asset_code: code }, success: `Registered ${code}.` }).then(
+    (ok) => {
+      if (ok) laptopRegisterForm.reset();
+    }
+  );
+});
+
+loanRequestForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const uid = loanStudentUidInput.value.trim();
+  if (!uid) return;
+  try {
+    // Raising a request is open (a student card tap), so no key is sent.
+    const res = await fetch(`${apiBase}/api/loans/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_uid: uid }),
+    });
+    if (!res.ok) throw new Error(await readError(res));
+    showLaptopMessage("Request raised.");
+    loanRequestForm.reset();
+    refreshLaptopSection();
+  } catch (error) {
+    showLaptopMessage(error.message, "error");
+  }
+});
+
+refreshLaptopsBtn.addEventListener("click", refreshLaptopSection);
+
 initialiseWeekdayHeader();
 pingBackend();
 loadRoster();
 loadEvents();
+refreshLaptopSection();
 setInterval(loadEvents, 5000);
+setInterval(refreshLaptopSection, 5000);
 manualUidInput.focus();

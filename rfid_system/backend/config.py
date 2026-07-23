@@ -53,6 +53,7 @@ class Settings:
     learning_cycles: tuple[LearningCycle, ...]
     strike_threshold: int
     debounce_seconds: int
+    max_concurrent_loans: int
     # Maps an API key to a role. Empty means auth is disabled (dev default).
     # Configure with RFID_API_KEYS, a JSON object of {"key": "role"}.
     # Prototype-grade only: a shared header key is not real user authentication.
@@ -121,6 +122,7 @@ def load_settings() -> Settings:
         learning_cycles=_default_cycles(),
         strike_threshold=_env_int("RFID_STRIKE_THRESHOLD", 3),
         debounce_seconds=_env_int("RFID_SCAN_DEBOUNCE_SECONDS", 60),
+        max_concurrent_loans=_env_int("RFID_MAX_CONCURRENT_LOANS", 1),
         api_keys=_load_api_keys(),
     )
 

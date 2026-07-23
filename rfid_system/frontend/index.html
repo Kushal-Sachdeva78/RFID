@@ -157,6 +157,72 @@
         </table>
       </section>
 
+      <section id="laptops">
+        <div class="section-header">
+          <h2>Laptop Borrowing</h2>
+          <button id="refresh-laptops" type="button">Refresh</button>
+        </div>
+        <p class="hint">
+          Privileged actions (approve, deny, issue, return, register, repair) use the staff API key
+          from the Manual RFID Entry section when the server requires one.
+        </p>
+        <div class="grid">
+          <form id="laptop-register-form" class="inline-form">
+            <label>
+              Register laptop (asset code)
+              <input type="text" id="laptop-asset-code" placeholder="e.g. LT-042" required />
+            </label>
+            <button type="submit">Register</button>
+          </form>
+          <form id="loan-request-form" class="inline-form">
+            <label>
+              Raise borrow request (student UID)
+              <input type="text" id="loan-student-uid" placeholder="e.g. B3 4B 6F 21" required />
+            </label>
+            <button type="submit">Request</button>
+          </form>
+        </div>
+        <span id="laptop-message" class="message" aria-live="polite"></span>
+
+        <h3>Loan requests</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>State</th>
+              <th>Unit</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="loans-body"></tbody>
+        </table>
+
+        <h3>Outstanding loans</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Unit</th>
+              <th>Held for</th>
+              <th>Issued by</th>
+            </tr>
+          </thead>
+          <tbody id="outstanding-body"></tbody>
+        </table>
+
+        <h3>Laptops</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Asset code</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="laptops-body"></tbody>
+        </table>
+      </section>
+
       <section id="events">
         <div class="section-header">
           <h2>Attendance Events</h2>

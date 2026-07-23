@@ -74,3 +74,52 @@ class EventResponse(BaseModel):
 
 class RosterResponse(BaseModel):
     roster: list[RosterPerson]
+
+
+# --- Laptop borrowing ----------------------------------------------------------
+
+
+class LaptopIn(BaseModel):
+    asset_code: str = Field(..., description="Numbered asset code printed on the unit.")
+    notes: str | None = None
+
+
+class LaptopPatch(BaseModel):
+    status: str | None = Field(
+        None, description="One of: available, under_repair, retired."
+    )
+    notes: str | None = None
+
+
+class Laptop(BaseModel):
+    asset_code: str
+    status: str = "available"
+    notes: str | None = None
+    created_at: datetime = Field(default_factory=_now_local)
+
+
+class LoanRequestIn(BaseModel):
+    student_uid: str
+    student_name: str | None = None
+
+
+class IssueIn(BaseModel):
+    asset_code: str
+
+
+class Loan(BaseModel):
+    id: str
+    student_uid: str
+    student_name: str | None = None
+    state: str = "requested"
+    requested_at: datetime = Field(default_factory=_now_local)
+    approved_by: str | None = None
+    approved_at: datetime | None = None
+    denied_by: str | None = None
+    collection_deadline: datetime | None = None
+    asset_code: str | None = None
+    issued_by: str | None = None
+    issued_at: datetime | None = None
+    returned_by: str | None = None
+    returned_at: datetime | None = None
+    closed_reason: str | None = None

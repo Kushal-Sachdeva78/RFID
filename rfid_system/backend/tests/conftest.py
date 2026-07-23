@@ -45,6 +45,7 @@ def api_keys(monkeypatch):
         "admin-key": "admin",
         "office-key": "office",
         "teacher-key": "teacher",
+        "helper-key": "helper",
         "guard-key": "guard",
     }
     patched = dataclasses.replace(config.settings, api_keys=keys)
