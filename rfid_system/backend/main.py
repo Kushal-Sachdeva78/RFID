@@ -10,9 +10,10 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from auth import require_role
 from config import settings
 from models import (
     AttendanceEvent,
@@ -21,6 +22,7 @@ from models import (
     RosterPerson,
     RosterResponse,
 )
+from services import authorization_for, classify_direction
 from storage import Storage
 
 _storage = Storage(settings.data_dir)
@@ -61,7 +63,11 @@ def get_roster(storage: Storage = Depends(get_storage)) -> RosterResponse:
     return RosterResponse(roster=[RosterPerson(**person) for person in storage.roster.all()])
 
 
-@app.post("/api/roster", response_model=RosterResponse)
+@app.post(
+    "/api/roster",
+    response_model=RosterResponse,
+    dependencies=[Depends(require_role("admin", "office"))],
+)
 def upsert_roster(
     people: list[RosterPerson], storage: Storage = Depends(get_storage)
 ) -> RosterResponse:
@@ -82,10 +88,12 @@ def _lookup_person(storage: Storage, uid: str) -> dict[str, Any] | None:
     return None
 
 
-@app.post("/api/logs", response_model=EventResponse)
-def register_event(
-    event_in: EventIn, storage: Storage = Depends(get_storage)
-) -> EventResponse:
+def _record_event(event_in: EventIn, storage: Storage, response: Response) -> EventResponse:
+    """Shared ingest path for both device scans and manual office entries.
+
+    Computes entry/exit direction and the guard-facing transport authorization
+    on the backend, so the ESP32 stays thin and this logic is unit tested.
+    """
     person_details = event_in.person or _lookup_person(storage, event_in.uid)
 
     # Use the device's clock when it sends one; otherwise stamp on arrival. A
@@ -93,15 +101,35 @@ def register_event(
     timestamp = event_in.timestamp
     if timestamp is not None and timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=settings.tz)
+    effective_time = timestamp if timestamp is not None else settings.now()
+
+    prior_events = storage.logs.all()
+    status = event_in.status
+    direction: str | None
+    if status == "rejected":
+        # Unknown card: no direction and no authorization.
+        direction = None
+    else:
+        direction, is_duplicate = classify_direction(prior_events, event_in.uid, effective_time)
+        if is_duplicate:
+            status = "duplicate"
+
+    transport = None
+    authorization = None
+    if direction == "exit":
+        transport = (person_details or {}).get("transport")
+        authorization = authorization_for(transport)
 
     event_kwargs: dict[str, Any] = {
         "uid": event_in.uid,
-        "status": event_in.status,
+        "status": status,
         "reader_location": event_in.reader_location or "main_gate",
+        "direction": direction,
         "details": {
             "person": person_details,
             "lateness": event_in.lateness,
             "manual": event_in.manual,
+            "recorded_by": event_in.recorded_by,
             "notes": event_in.notes,
         },
     }
@@ -109,9 +137,46 @@ def register_event(
         event_kwargs["timestamp"] = timestamp
 
     event = AttendanceEvent(**event_kwargs)
-
     storage.logs.append(event.model_dump(mode="json"))
-    return EventResponse(ok=True, event=event)
+
+    # Expose direction and authorization as headers too, so the thin firmware
+    # can show a guard banner without parsing JSON.
+    response.headers["X-Direction"] = direction or ""
+    response.headers["X-Transport-Authorization"] = authorization or ""
+
+    return EventResponse(
+        ok=True,
+        event=event,
+        direction=direction,
+        transport=transport,
+        authorization=authorization,
+    )
+
+
+@app.post("/api/logs", response_model=EventResponse)
+def register_event(
+    event_in: EventIn, response: Response, storage: Storage = Depends(get_storage)
+) -> EventResponse:
+    """Device scan ingest. Open, since the ESP32 has no key (by design)."""
+    return _record_event(event_in, storage, response)
+
+
+@app.post("/api/manual-entry", response_model=EventResponse)
+def manual_entry(
+    event_in: EventIn,
+    response: Response,
+    role: str | None = Depends(require_role("office", "teacher", "admin")),
+    storage: Storage = Depends(get_storage),
+) -> EventResponse:
+    """Office-side fallback for a forgotten or lost card.
+
+    Requires a staff role. The event is flagged manual and attributed to the
+    staff member who recorded it (recorded_by, falling back to their role).
+    """
+    event_in.manual = True
+    if not event_in.recorded_by:
+        event_in.recorded_by = role or "staff"
+    return _record_event(event_in, storage, response)
 
 
 if __name__ == "__main__":

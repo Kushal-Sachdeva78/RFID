@@ -31,6 +31,9 @@ const scanTransport = document.getElementById("scan-transport");
 const scanTime = document.getElementById("scan-time");
 const weekDaysRow = document.getElementById("week-days");
 const weekStatusRow = document.getElementById("week-status");
+const scanAuthorization = document.getElementById("scan-authorization");
+const manualRecordedByInput = document.getElementById("manual-recorded-by");
+const manualApiKeyInput = document.getElementById("manual-api-key");
 
 let apiBase = localStorage.getItem("rfid_api_base") || "http://localhost:8000";
 apiUrlInput.value = apiBase;
@@ -40,6 +43,22 @@ analyticsPromise.catch((error) => {
 });
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const TRANSPORT_AUTHORIZATION = {
+  walk: "Authorised to walk home",
+  car: "Authorised to go by car",
+  bus: "Authorised to take the bus",
+};
+
+function authorizationFor(transport) {
+  if (!transport) return "Transport not on record";
+  return (
+    TRANSPORT_AUTHORIZATION[String(transport).trim().toLowerCase()] || `Transport: ${transport}`
+  );
+}
+
+if (manualApiKeyInput) {
+  manualApiKeyInput.value = localStorage.getItem("rfid_api_key") || "";
+}
 const rosterByUid = new Map();
 let backendEvents = [];
 const offlineEvents = [];
@@ -122,6 +141,7 @@ function renderLastScan(latestEvent, eventsForWeek = []) {
     scanRole.textContent = "Role / Class";
     scanTransport.textContent = "Transport mode";
     scanTime.textContent = "Timestamp";
+    scanAuthorization.hidden = true;
     weekStatusRow.innerHTML = WEEKDAY_LABELS.map(() => `<td>-</td>`).join("\n");
     return;
   }
@@ -144,6 +164,21 @@ function renderLastScan(latestEvent, eventsForWeek = []) {
 
   const statusLabel = formatStatus(latestEvent.status);
   scanTime.textContent = `${timestamp.toLocaleString()} • ${statusLabel}`;
+
+  // Guard-facing entry/exit banner. On exit it shows how the student is
+  // authorised to travel home (walk, car, or bus).
+  const direction = latestEvent.direction;
+  if (direction === "exit") {
+    scanAuthorization.textContent = `EXIT · ${authorizationFor(person?.transport)}`;
+    scanAuthorization.className = "auth-banner exit";
+    scanAuthorization.hidden = false;
+  } else if (direction === "entry") {
+    scanAuthorization.textContent = "ENTRY";
+    scanAuthorization.className = "auth-banner entry";
+    scanAuthorization.hidden = false;
+  } else {
+    scanAuthorization.hidden = true;
+  }
 
   if (person?.photo_url) {
     scanPhoto.src = person.photo_url;
@@ -217,13 +252,13 @@ function renderEventsTable() {
   if (lastEventsError) {
     const warningRow = document.createElement("tr");
     warningRow.classList.add("warning-row");
-    warningRow.innerHTML = `<td colspan="5">Backend unavailable (${lastEventsError.message}). Manual entries will be stored locally until the server is back.</td>`;
+    warningRow.innerHTML = `<td colspan="6">Backend unavailable (${lastEventsError.message}). Manual entries will be stored locally until the server is back.</td>`;
     eventsBody.appendChild(warningRow);
   }
 
   if (events.length === 0) {
     const emptyRow = document.createElement("tr");
-    emptyRow.innerHTML = "<td colspan=\"5\">No events yet. Use the manual form to simulate a scan.</td>";
+    emptyRow.innerHTML = "<td colspan=\"6\">No events yet. Use the manual form to simulate a scan.</td>";
     eventsBody.appendChild(emptyRow);
     renderLastScan(null, events);
     return;
@@ -249,13 +284,15 @@ function renderEventsTable() {
       row.classList.add("offline");
     }
     if (event.details?.manual || event.offline) {
-      details.push("Manual entry");
+      const recordedBy = event.details?.recorded_by;
+      details.push(recordedBy ? `Manual entry by ${recordedBy}` : "Manual entry");
     }
 
     row.innerHTML = `
       <td>${new Date(event.timestamp).toLocaleString()}</td>
       <td><code>${event.uid}</code></td>
       <td>${event.status}</td>
+      <td>${event.direction || "-"}</td>
       <td>${event.reader_location}</td>
       <td>${details.join(" · ") || "-"}</td>
     `;
@@ -299,6 +336,13 @@ async function submitManualEvent(event) {
   const status = manualStatusSelect.value;
   const readerLocation = manualLocationInput.value.trim() || "manual_station";
   const notes = manualNotesInput.value.trim() || null;
+  const recordedBy = manualRecordedByInput.value.trim() || null;
+  const apiKey = manualApiKeyInput.value.trim();
+  if (apiKey) {
+    localStorage.setItem("rfid_api_key", apiKey);
+  } else {
+    localStorage.removeItem("rfid_api_key");
+  }
 
   const name = manualNameInput.value.trim();
   const role = manualRoleInput.value.trim();
@@ -320,6 +364,7 @@ async function submitManualEvent(event) {
     status,
     reader_location: readerLocation,
     manual: true,
+    recorded_by: recordedBy,
     notes,
   };
 
@@ -328,16 +373,22 @@ async function submitManualEvent(event) {
   }
 
   try {
-    const res = await fetch(`${apiBase}/api/logs`, {
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) {
+      headers["X-API-Key"] = apiKey;
+    }
+    const res = await fetch(`${apiBase}/api/manual-entry`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
-      const error = new Error(`Backend rejected the event (status ${res.status}).`);
+      const message =
+        res.status === 401 || res.status === 403
+          ? `Staff API key required or not permitted (status ${res.status}).`
+          : `Backend rejected the event (status ${res.status}).`;
+      const error = new Error(message);
       error.status = res.status;
       throw error;
     }

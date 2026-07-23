@@ -51,6 +51,11 @@ class Settings:
     late_hour: int
     late_minute: int
     learning_cycles: tuple[LearningCycle, ...]
+    debounce_seconds: int
+    # Maps an API key to a role. Empty means auth is disabled (dev default).
+    # Configure with RFID_API_KEYS, a JSON object of {"key": "role"}.
+    # Prototype-grade only: a shared header key is not real user authentication.
+    api_keys: dict[str, str]
 
     @property
     def tz(self) -> timezone:
@@ -95,6 +100,14 @@ def _default_cycles() -> tuple[LearningCycle, ...]:
     )
 
 
+def _load_api_keys() -> dict[str, str]:
+    raw = os.environ.get("RFID_API_KEYS")
+    if not raw:
+        return {}
+    parsed = json.loads(raw)
+    return {str(key): str(role) for key, role in parsed.items()}
+
+
 def load_settings() -> Settings:
     data_dir_raw = os.environ.get("RFID_DATA_DIR")
     data_dir = pathlib.Path(data_dir_raw) if data_dir_raw else (BASE_DIR / "data")
@@ -105,6 +118,8 @@ def load_settings() -> Settings:
         late_hour=_env_int("RFID_LATE_HOUR", 8),
         late_minute=_env_int("RFID_LATE_MINUTE", 5),
         learning_cycles=_default_cycles(),
+        debounce_seconds=_env_int("RFID_SCAN_DEBOUNCE_SECONDS", 60),
+        api_keys=_load_api_keys(),
     )
 
 

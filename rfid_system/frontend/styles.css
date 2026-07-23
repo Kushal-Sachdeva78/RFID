@@ -282,6 +282,27 @@ tr.offline td {
   color: #f97316;
 }
 
+.auth-banner {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  display: inline-block;
+}
+
+.auth-banner.entry {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+}
+
+.auth-banner.exit {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+}
+
 @media (max-width: 768px) {
   main {
     grid-template-columns: 1fr;

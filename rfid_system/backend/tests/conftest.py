@@ -6,9 +6,12 @@ data files and never interfere with each other.
 """
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 from fastapi.testclient import TestClient
 
+import config
 import main
 from storage import Storage
 
@@ -26,3 +29,17 @@ def client(storage):
     with TestClient(main.app) as test_client:
         yield test_client
     main.app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def api_keys(monkeypatch):
+    """Enable role-scoped auth with a known set of keys for permission tests."""
+    keys = {
+        "admin-key": "admin",
+        "office-key": "office",
+        "teacher-key": "teacher",
+        "guard-key": "guard",
+    }
+    patched = dataclasses.replace(config.settings, api_keys=keys)
+    monkeypatch.setattr(config, "settings", patched)
+    return keys

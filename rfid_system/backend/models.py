@@ -37,6 +37,9 @@ class AttendanceEvent(BaseModel):
     timestamp: datetime = Field(default_factory=_now_local)
     reader_location: str = Field("main_gate", description="Where the scan occurred.")
     status: str = Field(..., description="One of: accepted, duplicate, rejected, late.")
+    direction: str | None = Field(
+        None, description="entry or exit, computed by the backend, or null for unknown cards."
+    )
     details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -53,12 +56,20 @@ class EventIn(BaseModel):
     manual: bool = Field(
         False, description="True when the event was created from the dashboard, not the ESP32."
     )
+    recorded_by: str | None = Field(
+        None, description="Staff member who recorded a manual entry (attribution)."
+    )
     notes: str | None = Field(None, description="Optional free-form notes for manual submissions.")
 
 
 class EventResponse(BaseModel):
     ok: bool
     event: AttendanceEvent
+    direction: str | None = None
+    transport: str | None = None
+    authorization: str | None = Field(
+        None, description="Guard-facing message shown on exit (walk, car, or bus)."
+    )
 
 
 class RosterResponse(BaseModel):

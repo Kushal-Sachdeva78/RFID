@@ -126,6 +126,11 @@ bool wifiConfigured = false;   // true when a non-empty SSID is compiled in
 bool timeSynced = false;       // true once NTP has given us a real time
 uint32_t lastNetMaintenance = 0;
 
+// Guard-facing result of the most recent live scan, taken from the backend
+// response headers (no JSON parsing needed on the device).
+String lastDirection = "";
+String lastAuthorization = "";
+
 // Offline buffer: scans that could not be posted are kept here and flushed
 // (oldest first) once the backend is reachable again.
 struct PendingEvent {
@@ -449,6 +454,7 @@ void connectWifiBlocking() {
 // -----------------------------------------------------------------------------
 bool postEvent(const String& payload) {
   if (WiFi.status() != WL_CONNECTED) return false;
+  static const char* headerKeys[] = {"X-Direction", "X-Transport-Authorization"};
   bool ok = false;
   HTTPClient http;
   http.setTimeout(HTTP_TIMEOUT_MS);
@@ -456,11 +462,15 @@ bool postEvent(const String& payload) {
   for (uint8_t attempt = 0; attempt < HTTP_RETRIES && !ok; ++attempt) {
     if (!http.begin(url)) break;
     http.addHeader("Content-Type", "application/json");
+    http.collectHeaders(headerKeys, 2);
     int code = http.POST(payload);
-    http.end();
     if (code >= 200 && code < 300) {
+      lastDirection = http.header("X-Direction");
+      lastAuthorization = http.header("X-Transport-Authorization");
       ok = true;
-    } else {
+    }
+    http.end();
+    if (!ok) {
       delay(HTTP_RETRY_DELAY_MS);
     }
   }
@@ -493,9 +503,27 @@ void flushOfflineBuffer() {
   }
 }
 
-void sendOrBuffer(const String& payload) {
-  if (!postEvent(payload)) {
-    bufferEvent(payload);
+// Draw the entry/exit banner at the bottom of the card. On exit it also shows
+// how the student is authorised to travel home (walk, car, or bus).
+void drawGateBanner(const String& direction, const String& authorization) {
+  const int y = 210;
+  tft.fillRect(0, y, 320, 30, ILI9341_BLACK);
+  tft.setCursor(8, y + 2);
+  tft.setTextSize(2);
+  if (direction == "exit") {
+    tft.setTextColor(ILI9341_CYAN);
+    tft.print("EXIT");
+  } else if (direction == "entry") {
+    tft.setTextColor(ILI9341_GREEN);
+    tft.print("ENTRY");
+  } else {
+    return;
+  }
+  if (authorization.length() > 0) {
+    tft.setTextSize(1);
+    tft.setTextColor(ILI9341_WHITE);
+    tft.setCursor(96, y + 8);
+    tft.print(authorization);
   }
 }
 
@@ -547,7 +575,16 @@ String buildScanPayload(const String& uid, const char* status, const Person* per
 void reportScan(const String& uid, const char* status, const Person* person,
                 bool late, int lateMinutes) {
   if (!wifiConfigured) return; // no network configured: pure offline demo
-  sendOrBuffer(buildScanPayload(uid, status, person, late, lateMinutes));
+  String payload = buildScanPayload(uid, status, person, late, lateMinutes);
+  lastDirection = "";
+  lastAuthorization = "";
+  if (postEvent(payload)) {
+    if (lastDirection.length() > 0) {
+      drawGateBanner(lastDirection, lastAuthorization);
+    }
+  } else {
+    bufferEvent(payload); // offline: keep it and flush when the backend returns
+  }
 }
 
 void maintainNetwork() {
