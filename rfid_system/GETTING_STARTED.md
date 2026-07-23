@@ -1,151 +1,152 @@
-# Getting Started (Software Only)
+# Getting Started
 
-Use this guide when you want to run the RFID system on a laptop without flashing the ESP32. It walks
-through installing dependencies, starting the local backend, opening the dashboard, and connecting
-the dashboard to Firebase for logging.
-
----
-
-## 1. Prepare the Backend
-
-1. Open a terminal and switch into the backend folder:
-   ```bash
-   cd rfid_system/backend
-   ```
-2. Create a Python virtual environment (recommended):
-   ```bash
-   python -m venv .venv
-   ```
-3. Activate it:
-   - macOS / Linux:
-     ```bash
-     source .venv/bin/activate
-     ```
-   - Windows (PowerShell):
-     ```powershell
-     .venv\Scripts\Activate.ps1
-     ```
-4. Install the required packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
-5. Start the API (it uses [FastAPI](https://fastapi.tiangolo.com/) with Uvicorn):
-   ```bash
-   uvicorn main:app --reload
-   ```
-
-The backend will listen on `http://127.0.0.1:8000`. Keep this terminal running.
+Run the RFID system on a laptop with no hardware, then optionally compile the
+firmware and wire up Firebase. Every step below runs with no credentials.
 
 ---
 
-## 2. Open the Dashboard
+## 1. Backend
 
-1. In a second terminal, serve the frontend files:
-   ```bash
-   cd rfid_system/frontend
-   python -m http.server 5173
-   ```
-2. Browse to `http://localhost:5173`.
-3. Inside the **Backend Connection** card, enter the backend URL (`http://127.0.0.1:8000`) and click
-   **Connect**. The roster and attendance tables will load from the JSON data bundled with the repo.
-4. Testing without the backend? Leave it stopped—the dashboard will note the offline status but still
-   accepts manual scans so you can demo the SPI screen preview locally.
+```bash
+cd rfid_system/backend
+python -m venv .venv
+# macOS / Linux:
+source .venv/bin/activate
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
 
----
-
-## 3. Simulate RFID Scans Manually
-
-The **Manual RFID Entry** form lets you type any UID (for example `AA BB CC DD`) to simulate a scan.
-Expand the **Optional display details** drawer to override the name, role, class, transport mode, and
-photo that appear on the SPI preview.
-
-Each submission will:
-
-1. POST the event to the backend (`POST /api/logs`).
-2. Refresh the dashboard tables so you can confirm the entry.
-3. Update the **SPI Screen Preview** card with the student's photo, transport mode, and a colour-coded
-   timetable for the current week.
-4. (Optional) Mirror the event to Firebase Firestore if you configure Firebase in the next step.
-
-Use this workflow to prototype the UI without the ESP32 connected. If the backend is offline, the
-dashboard keeps the scan locally, highlights it in the events table, and updates the SPI preview so you
-can keep testing.
-
-> 💡 **Tip:** The backend understands the same statuses that the firmware sends. Choose the
-> value that matches what you want to test:
-> - `accepted` – normal entry/exit records (shows a green checkmark in the weekly grid).
-> - `duplicate` – repeat scans that should not mark attendance again.
-> - `late` – submissions that include lateness details from the ESP32 (shows a yellow dash).
-> - `rejected` – scans from unregistered cards (the day stays red with an **X**).
->
-> You can also add optional notes in the form to see how annotations appear in the events
-> table and Firebase.
-
----
-
-## 4. Configure Firebase (Optional)
-
-The dashboard already imports Firebase modules and reads configuration values from
-`rfid_system/frontend/firebase.js`. Replace the placeholder configuration with the details you
-provided:
-
-```javascript
-// rfid_system/frontend/firebase.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCu0eajMj6wsOZN6YAa5a4y1nJqbFGRQt4",
-  authDomain: "rfid-a9353.firebaseapp.com",
-  projectId: "rfid-a9353",
-  storageBucket: "rfid-a9353.firebasestorage.app",
-  messagingSenderId: "1032115456459",
-  appId: "1:1032115456459:web:f969ac442b97e9f71bce4e",
-  measurementId: "G-CPEZ5NSW66"
-};
-
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const manualScansCollection = collection(db, "manual_scans");
-export const timestamp = serverTimestamp;
+pip install -r requirements.txt -r requirements-dev.txt
+uvicorn main:app --reload
 ```
 
-> ℹ️ The repository already contains this configuration—double-check it matches your Firebase
-> dashboard and update it if the values change.
+The API listens on `http://127.0.0.1:8000`. Check it with:
 
-### Firestore Security Rules
+```bash
+curl http://127.0.0.1:8000/api/health
+```
 
-Paste the rules below into the Firestore rules editor to protect the `manual_scans` collection while
-still allowing dashboard reads:
+Run the tests:
+
+```bash
+pytest -q
+```
+
+### Configuration (all optional, via environment variables)
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `RFID_TZ_OFFSET_MINUTES` | `330` | Local timezone offset. Default is India Standard Time (UTC+5:30, no daylight saving). |
+| `RFID_LATE_HOUR` / `RFID_LATE_MINUTE` | `8` / `5` | Lateness cutoff (08:05). |
+| `RFID_LEARNING_CYCLES` | one cycle, 08 Jul to 15 Oct 2026 | JSON array of `{name, start, end}` date ranges for strike tracking. |
+| `RFID_STRIKE_THRESHOLD` | `3` | Late days in a cycle before the class teacher is notified. |
+| `RFID_MAX_CONCURRENT_LOANS` | `1` | Active laptop loans a student may hold at once. |
+| `RFID_SCAN_DEBOUNCE_SECONDS` | `60` | A repeat tap inside this window is a duplicate, not an exit. |
+| `RFID_NOTIFIER` | `log` | Notifier backend: `log` (file plus stdout), `smtp`, or `none`. |
+| `RFID_API_KEYS` | unset | JSON object of `{"key": "role"}` enabling role checks (see below). |
+
+### Roles (prototype-grade)
+
+By default there is no authentication, so the repo runs with no credentials.
+When `RFID_API_KEYS` is set, privileged endpoints require an `X-API-Key` header
+mapped to a role. This is a single shared key per role, not per-user login, and
+is documented as a prototype, not production security. Example:
+
+```bash
+export RFID_API_KEYS='{"office-key":"office","teacher-key":"teacher","helper-key":"helper","admin-key":"admin"}'
+```
+
+Role requirements: manual attendance entry and roster writes need `office`,
+`teacher`, or `admin`; laptop register or repair needs `helper` or `admin`; loan
+approve or deny needs `teacher`; issue or return needs `helper`. The `admin` role
+is allowed everywhere. Device scans and student borrow requests are open.
+
+### Notifications (three-strike rule)
+
+Three late days within a learning cycle notify the student's class teacher. The
+class teacher is looked up in `data/class_teachers.json` by class section. The
+default notifier writes to `data/notifications.log` and stdout, so no email
+credentials are needed. To send email instead, set `RFID_NOTIFIER=smtp` and the
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM` variables.
+No credentials are ever committed.
+
+---
+
+## 2. Dashboard
+
+```bash
+cd rfid_system/frontend
+python -m http.server 5173
+```
+
+Browse to `http://localhost:5173`, enter the backend URL (`http://127.0.0.1:8000`)
+in the Backend Connection card, and click Connect. The dashboard shows the roster,
+attendance events with entry/exit direction, a gate preview with the exit
+authorization banner, the manual entry form, and the laptop borrowing panel. If
+the backend is stopped, manual scans are buffered locally.
+
+---
+
+## 3. Firmware (compile only)
+
+The firmware target is the ESP32 DevKit V1. There is no hardware step here: a
+clean compile is the gate.
+
+```bash
+arduino-cli core install esp32:esp32
+arduino-cli lib install "MFRC522" "Adafruit GFX Library" "Adafruit ILI9341"
+bash scripts/compile_firmware.sh
+```
+
+`scripts/compile_firmware.sh` stages `Main.ino` into `build/Main/` so the tracked
+file is never moved. To run against hardware, copy `arduino_secrets.example.h` to
+`arduino_secrets.h` (gitignored) and set your Wi-Fi and backend URL. With no
+secrets file, or an empty SSID, the firmware runs fully offline.
+
+---
+
+## 4. Laptop borrowing flow
+
+You can drive the whole flow from the dashboard Laptop Borrowing panel, or with
+curl (with `RFID_API_KEYS` unset, no keys are needed):
+
+```bash
+B=http://127.0.0.1:8000
+curl -s -X POST $B/api/laptops -H "Content-Type: application/json" -d '{"asset_code":"LT-042"}'
+LOAN=$(curl -s -X POST $B/api/loans/request -H "Content-Type: application/json" -d '{"student_uid":"04 11 22 33"}' | python -c "import sys,json;print(json.load(sys.stdin)['id'])")
+curl -s -X POST $B/api/loans/$LOAN/approve
+curl -s -X POST $B/api/loans/$LOAN/issue -H "Content-Type: application/json" -d '{"asset_code":"LT-042"}'
+curl -s $B/api/loans/outstanding
+curl -s -X POST $B/api/loans/$LOAN/return
+```
+
+---
+
+## 5. Firebase (optional)
+
+Firestore mirroring of manual scans is optional. Copy the example config and fill
+in your project:
+
+```bash
+cp rfid_system/frontend/firebase.config.example.js rfid_system/frontend/firebase.config.js
+```
+
+`firebase.config.js` is gitignored. When it is absent, the dashboard runs normally
+with mirroring disabled. A Firebase web apiKey is not a secret (it ships to every
+browser); the real protection is the Firestore rules below.
+
+### Firestore security rules
+
+These restrict access to authenticated clients. Wiring up Firebase Auth in the
+dashboard is out of scope for this prototype, so mirroring is off until that is
+added.
 
 ```text
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /manual_scans/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
   }
 }
 ```
-
-Adjust the `allow read`/`allow write` lines if your project needs different access levels.
-
----
-
-## 5. Next Steps
-
-- When you are ready to deploy to hardware, flash `Main.ino` onto the ESP32 with the Arduino IDE or
-  PlatformIO.
-- Update the backend roster data in `rfid_system/backend/data/roster.json` to reflect your actual
-  IDs and names.
-- Extend the frontend or backend to integrate with other systems (for example, exporting logs to
-  Veracross or triggering alerts).
-
-Keep this document handy whenever you set up the software on a new machine.

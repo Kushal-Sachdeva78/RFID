@@ -105,11 +105,14 @@ struct Person {
   int lastDayKey;           // tracks the simulated day when this card was last marked
 };
 
+// Sample roster only. These names, UIDs, and sections are synthetic. On a real
+// deployment the device would identify cards against the backend roster; this
+// small on-device set is a fallback so the demo runs with no network.
 Person roster[] = {
-  {"B3 4B 6F 21", "Kushal Sachdeva", "Student",    "Grade 10A",  "Walk", ILI9341_BLUE,    {STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT}, -1},
-  {"A3 3F 7D 21", "Ms Aggarwal",    "Teacher",    "Mathematics", "Bus",  ILI9341_MAGENTA, {STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT}, -1},
-  {"93 CE 78 21", "Ms Singh",       "Teacher",    "Science",     "Car",  ILI9341_ORANGE,  {STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT}, -1},
-  {"03 BF 82 21", "Ms Bakshi",      "Principal",  "Admin",       "Car",  ILI9341_CYAN,    {STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT}, -1}
+  {"04 11 22 33", "Sample Student", "Student", "Grade 10 - A", "Walk", ILI9341_BLUE,    {STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT}, -1},
+  {"04 44 55 66", "Sample Teacher", "Teacher", "Mathematics",  "Bus",  ILI9341_MAGENTA, {STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT}, -1},
+  {"04 77 88 99", "Demo Staff",     "Teacher", "Science",      "Car",  ILI9341_ORANGE,  {STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT}, -1},
+  {"04 AA BB CC", "Office Sample",  "Office",  "Admin",        "Car",  ILI9341_CYAN,    {STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT, STATUS_ABSENT}, -1}
 };
 const int ROSTER_COUNT = sizeof(roster) / sizeof(roster[0]);
 

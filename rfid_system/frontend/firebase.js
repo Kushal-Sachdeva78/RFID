@@ -1,5 +1,10 @@
 // Firebase initialization for the RFID dashboard.
 // Uses ESM imports directly from Google's CDN so no build tooling is required.
+//
+// The Firebase project config is loaded from firebase.config.js, which is NOT
+// committed. Copy firebase.config.example.js to firebase.config.js and fill in
+// your project values. When that file is absent (as in a fresh clone), Firestore
+// mirroring is simply disabled and the rest of the dashboard works normally.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAnalytics, isSupported } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 import {
@@ -9,23 +14,26 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Firebase configuration provided by the project owner.
-const firebaseConfig = {
-  apiKey: "AIzaSyCu0eajMj6wsOZN6YAa5a4y1nJqbFGRQt4",
-  authDomain: "rfid-a9353.firebaseapp.com",
-  projectId: "rfid-a9353",
-  storageBucket: "rfid-a9353.firebasestorage.app",
-  messagingSenderId: "1032115456459",
-  appId: "1:1032115456459:web:f969ac442b97e9f71bce4e",
-  measurementId: "G-CPEZ5NSW66",
-};
+let firebaseConfig = null;
+try {
+  const module = await import("./firebase.config.js");
+  firebaseConfig = module.firebaseConfig;
+} catch (error) {
+  console.info(
+    "firebase.config.js not found; Firestore mirroring is disabled. " +
+      "Copy firebase.config.example.js to firebase.config.js to enable it."
+  );
+}
 
-const firebaseApp = initializeApp(firebaseConfig);
+let db = null;
+let analyticsPromise = Promise.resolve(null);
 
-const analyticsPromise = isSupported()
-  .then((supported) => (supported ? getAnalytics(firebaseApp) : null))
-  .catch(() => null);
+if (firebaseConfig && firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("YOUR_")) {
+  const firebaseApp = initializeApp(firebaseConfig);
+  analyticsPromise = isSupported()
+    .then((supported) => (supported ? getAnalytics(firebaseApp) : null))
+    .catch(() => null);
+  db = getFirestore(firebaseApp);
+}
 
-const db = getFirestore(firebaseApp);
-
-export { firebaseApp, analyticsPromise, db, collection, addDoc, serverTimestamp };
+export { analyticsPromise, db, collection, addDoc, serverTimestamp };

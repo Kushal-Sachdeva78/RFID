@@ -453,7 +453,7 @@ async function submitManualEvent(event) {
     renderEventsTable();
 
     manualMessage.textContent =
-      "Backend offline — stored the scan locally and updated the preview.";
+      "Backend offline, stored the scan locally and updated the preview.";
     manualMessage.className = "message success";
     manualForm.reset();
     manualUidInput.focus();

@@ -15,6 +15,9 @@ arduino_secrets.h
 # Runtime notification log written by the default notifier backend.
 notifications.log
 
+# Firebase project config (copy from firebase.config.example.js). Not committed.
+firebase.config.js
+
 # OS cruft
 .DS_Store
 Thumbs.db
