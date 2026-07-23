@@ -1,147 +1,92 @@
 """FastAPI backend for the ESP32 RFID attendance system.
 
-This service provides a REST API that the ESP32 firmware can call to
-store attendance events. Data is persisted to a JSON file so that the
-front-end dashboard can display the events and the roster that the
-hardware uses can be synchronized with the web application.
+This service provides a REST API that the ESP32 firmware and the web dashboard
+call to store and read attendance events and the roster. Persistence lives
+behind the Storage abstraction (see storage.py) so the JSON backend can be
+swapped later without changing these route handlers.
 """
 from __future__ import annotations
 
-import json
-import pathlib
-from datetime import datetime
-from typing import Any, Dict, List
+from contextlib import asynccontextmanager
+from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 
-BASE_DIR = pathlib.Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "data"
-LOG_PATH = DATA_PATH / "attendance_logs.json"
-ROSTER_PATH = DATA_PATH / "roster.json"
+from config import settings
+from models import (
+    AttendanceEvent,
+    EventIn,
+    EventResponse,
+    RosterPerson,
+    RosterResponse,
+)
+from storage import Storage
 
-DATA_PATH.mkdir(parents=True, exist_ok=True)
+_storage = Storage(settings.data_dir)
 
-app = FastAPI(title="ESP32 RFID Attendance Service")
+
+def get_storage() -> Storage:
+    """Dependency returning the app's Storage. Overridable in tests."""
+    return _storage
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    get_storage().ensure_initialised()
+    yield
+
+
+app = FastAPI(title="ESP32 RFID Attendance Service", lifespan=lifespan)
+
+# The dashboard is served from a different origin and calls this API with plain
+# fetch (no cookies), so credentials are disabled. A wildcard origin with
+# credentials enabled is rejected by browsers, so this also fixes that.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-class RosterPerson(BaseModel):
-    uid: str = Field(..., description="UID in the same format as sent by the ESP32 (hex pairs).")
-    name: str
-    role: str
-    transport: str = Field(..., description="Mode of transport, affects lateness rules.")
-    class_name: str | None = Field(
-        None,
-        description="If provided, the homeroom or class section displayed by the SPI screen.",
-    )
-    photo_url: str | None = Field(
-        None,
-        description="Optional HTTPS image that the dashboard can show for the latest scan.",
-    )
-
-
-class AttendanceEvent(BaseModel):
-    uid: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    reader_location: str = Field("main_gate", description="Where the scan occurred.")
-    status: str = Field(..., description="One of: accepted, duplicate, rejected, late.")
-    details: Dict[str, Any] = Field(default_factory=dict)
-
-
-class EventIn(BaseModel):
-    uid: str
-    status: str = Field("accepted", description="Defaults to 'accepted' for manual submissions.")
-    person: Dict[str, Any] | None = None
-    lateness: Dict[str, Any] | None = None
-    reader_location: str | None = "main_gate"
-    manual: bool = Field(
-        False,
-        description="True when the event was created from the dashboard instead of the ESP32.",
-    )
-    notes: str | None = Field(
-        None,
-        description="Optional free-form notes to include alongside manual submissions.",
-    )
-
-
-class EventResponse(BaseModel):
-    ok: bool
-    event: AttendanceEvent
-
-
-class RosterResponse(BaseModel):
-    roster: List[RosterPerson]
-
-
-def _load_json(path: pathlib.Path, default: Any) -> Any:
-    if not path.exists():
-        return default
-    with path.open("r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=500, detail=f"Failed to read {path.name}: {exc}")
-
-
-def _save_json(path: pathlib.Path, payload: Any) -> None:
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
-
-
-@app.on_event("startup")
-async def ensure_files() -> None:
-    if not LOG_PATH.exists():
-        _save_json(LOG_PATH, [])
-    if not ROSTER_PATH.exists():
-        _save_json(ROSTER_PATH, [])
-
-
 @app.get("/api/health")
-def health() -> Dict[str, Any]:
+def health() -> dict[str, Any]:
     return {"status": "ok"}
 
 
 @app.get("/api/roster", response_model=RosterResponse)
-def get_roster() -> RosterResponse:
-    roster_data = _load_json(ROSTER_PATH, [])
-    return RosterResponse(roster=[RosterPerson(**person) for person in roster_data])
+def get_roster(storage: Storage = Depends(get_storage)) -> RosterResponse:
+    return RosterResponse(roster=[RosterPerson(**person) for person in storage.roster.all()])
 
 
 @app.post("/api/roster", response_model=RosterResponse)
-def upsert_roster(people: List[RosterPerson]) -> RosterResponse:
-    _save_json(ROSTER_PATH, [person.dict() for person in people])
+def upsert_roster(
+    people: list[RosterPerson], storage: Storage = Depends(get_storage)
+) -> RosterResponse:
+    storage.roster.replace([person.model_dump() for person in people])
     return RosterResponse(roster=people)
 
 
 @app.get("/api/logs")
-def get_logs() -> Dict[str, List[AttendanceEvent]]:
-    logs = _load_json(LOG_PATH, [])
-    return {"events": [AttendanceEvent(**event) for event in logs]}
+def get_logs(storage: Storage = Depends(get_storage)) -> dict[str, list[AttendanceEvent]]:
+    return {"events": [AttendanceEvent(**event) for event in storage.logs.all()]}
 
 
-def _lookup_person(uid: str) -> Dict[str, Any] | None:
+def _lookup_person(storage: Storage, uid: str) -> dict[str, Any] | None:
     """Return the roster entry for the provided UID if one exists."""
-
-    roster = _load_json(ROSTER_PATH, [])
-    for person in roster:
+    for person in storage.roster.all():
         if person.get("uid") == uid:
             return person
     return None
 
 
 @app.post("/api/logs", response_model=EventResponse)
-def register_event(event_in: EventIn) -> EventResponse:
-    logs = _load_json(LOG_PATH, [])
-
-    person_details = event_in.person or _lookup_person(event_in.uid)
+def register_event(
+    event_in: EventIn, storage: Storage = Depends(get_storage)
+) -> EventResponse:
+    person_details = event_in.person or _lookup_person(storage, event_in.uid)
 
     event = AttendanceEvent(
         uid=event_in.uid,
@@ -155,9 +100,7 @@ def register_event(event_in: EventIn) -> EventResponse:
         },
     )
 
-    logs.append(json.loads(event.json()))
-    _save_json(LOG_PATH, logs)
-
+    storage.logs.append(event.model_dump(mode="json"))
     return EventResponse(ok=True, event=event)
 
 

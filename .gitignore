@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Firmware compile staging (Main.ino is copied here to satisfy arduino-cli's
+# sketch folder naming rule; the copy is a build artifact, not source)
+build/
+
+# OS cruft
+.DS_Store
+Thumbs.db
