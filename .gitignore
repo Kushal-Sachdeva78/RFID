@@ -18,6 +18,10 @@ notifications.log
 # Firebase project config (copy from firebase.config.example.js). Not committed.
 firebase.config.js
 
+# KiCad footprint cache and editor backup archives (regenerated locally, not source)
+RFID KICAD/fp-info-cache
+RFID KICAD/RFID2-backups/
+
 # OS cruft
 .DS_Store
 Thumbs.db
