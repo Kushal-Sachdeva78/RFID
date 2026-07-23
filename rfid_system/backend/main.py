@@ -88,17 +88,27 @@ def register_event(
 ) -> EventResponse:
     person_details = event_in.person or _lookup_person(storage, event_in.uid)
 
-    event = AttendanceEvent(
-        uid=event_in.uid,
-        status=event_in.status,
-        reader_location=event_in.reader_location or "main_gate",
-        details={
+    # Use the device's clock when it sends one; otherwise stamp on arrival. A
+    # naive timestamp is assumed to be in the configured local timezone.
+    timestamp = event_in.timestamp
+    if timestamp is not None and timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=settings.tz)
+
+    event_kwargs: dict[str, Any] = {
+        "uid": event_in.uid,
+        "status": event_in.status,
+        "reader_location": event_in.reader_location or "main_gate",
+        "details": {
             "person": person_details,
             "lateness": event_in.lateness,
             "manual": event_in.manual,
             "notes": event_in.notes,
         },
-    )
+    }
+    if timestamp is not None:
+        event_kwargs["timestamp"] = timestamp
+
+    event = AttendanceEvent(**event_kwargs)
 
     storage.logs.append(event.model_dump(mode="json"))
     return EventResponse(ok=True, event=event)

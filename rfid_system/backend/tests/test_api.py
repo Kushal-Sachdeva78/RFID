@@ -99,6 +99,34 @@ def test_timestamp_is_timezone_aware_ist(client):
     assert parsed.utcoffset() == timedelta(minutes=330)
 
 
+def test_device_supplied_timestamp_is_preserved(client):
+    res = client.post(
+        "/api/logs",
+        json={
+            "uid": "AA 11 BB 22",
+            "status": "late",
+            "timestamp": "2026-07-23T08:10:30+05:30",
+            "lateness": {"late": True, "minutes": 5},
+        },
+    )
+    assert res.status_code == 200
+    event = res.json()["event"]
+    parsed = datetime.fromisoformat(event["timestamp"])
+    assert parsed.utcoffset() == timedelta(minutes=330)
+    assert parsed.hour == 8 and parsed.minute == 10 and parsed.second == 30
+    assert event["details"]["lateness"] == {"late": True, "minutes": 5}
+
+
+def test_naive_device_timestamp_gets_local_timezone(client):
+    res = client.post(
+        "/api/logs",
+        json={"uid": "AA 11 BB 22", "status": "accepted", "timestamp": "2026-07-23T08:10:30"},
+    )
+    assert res.status_code == 200
+    parsed = datetime.fromisoformat(res.json()["event"]["timestamp"])
+    assert parsed.utcoffset() == timedelta(minutes=330)
+
+
 def test_storage_isolation_between_data_dirs(tmp_path):
     """A store in one dir does not see records written to another dir."""
     from storage import Storage

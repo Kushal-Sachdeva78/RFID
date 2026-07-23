@@ -25,5 +25,11 @@ fi
 mkdir -p "$BUILD_DIR"
 cp "$SKETCH_SRC" "$BUILD_DIR/Main.ino"
 
+# Include local credentials if present. Absent in CI, where the placeholders in
+# Main.ino keep the sketch compiling.
+if [ -f "$REPO_ROOT/arduino_secrets.h" ]; then
+  cp "$REPO_ROOT/arduino_secrets.h" "$BUILD_DIR/arduino_secrets.h"
+fi
+
 echo "Compiling Main.ino for $FQBN ..."
 "$CLI" compile --fqbn "$FQBN" "$BUILD_DIR" --warnings all

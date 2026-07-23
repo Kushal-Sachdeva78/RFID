@@ -9,6 +9,9 @@ venv/
 # sketch folder naming rule; the copy is a build artifact, not source)
 build/
 
+# Firmware secrets (Wi-Fi credentials, backend URL). Commit only the example.
+arduino_secrets.h
+
 # OS cruft
 .DS_Store
 Thumbs.db

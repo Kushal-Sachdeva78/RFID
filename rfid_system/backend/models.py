@@ -43,6 +43,10 @@ class AttendanceEvent(BaseModel):
 class EventIn(BaseModel):
     uid: str
     status: str = Field("accepted", description="Defaults to 'accepted' for manual submissions.")
+    timestamp: datetime | None = Field(
+        None,
+        description="Scan time from the device's real clock. When omitted, the server stamps it.",
+    )
     person: dict[str, Any] | None = None
     lateness: dict[str, Any] | None = None
     reader_location: str | None = "main_gate"
