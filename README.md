@@ -1,4 +1,9 @@
 # RFID Entry-Exit System for Vasant Valley School
+Tap a school ID card to log attendance and laptop loans: ESP32 reader, FastAPI backend, web dashboard. For schools and makers.
+```bash
+cd rfid_system/backend && pip install -r requirements.txt && uvicorn main:app --reload   # use a venv, see rfid_system/GETTING_STARTED.md
+```
+<!-- DEMO: record a 5-10 s GIF of a card tap appearing on the dashboard, save as docs/demo.gif, then replace this line with ![RFID demo](docs/demo.gif) -->
 
 A prototype of an RFID-based attendance, entry-exit, and laptop-borrowing system
 built around the school's existing ID cards: ESP32 firmware with an RC522 reader
