@@ -2,9 +2,13 @@
 
 All notable changes to this repository are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The entries below are taken from the
-commit history; the project has no tagged releases yet.
+commit history.
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-11-09
+
+First tagged release. The project is a prototype; the Status section of the README lists what is not done yet.
 
 ### Added
 
