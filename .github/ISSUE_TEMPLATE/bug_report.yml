@@ -1,0 +1,45 @@
+name: "Bug report"
+description: "Something in the firmware, backend, dashboard or docs does not work as described"
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: "Component"
+      options:
+        - "Firmware (Main.ino)"
+        - "Backend (FastAPI)"
+        - "Dashboard"
+        - "PCB or hardware"
+        - "Docs"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "What did you do?"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "What did you expect?"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: "What happened?"
+      description: "Paste output or logs."
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: "Environment"
+      description: "OS, Python version, board and reader model, firmware commit."
+      placeholder: |
+        OS:
+        Python:
+        Board:

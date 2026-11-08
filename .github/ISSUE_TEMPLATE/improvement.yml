@@ -1,0 +1,16 @@
+name: "Feature or documentation improvement"
+description: "Suggest a feature, a docs fix or a clearer instruction"
+title: "[idea] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: change
+    attributes:
+      label: "What should change"
+      description: "Point to the file if you can."
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: "Why it helps"
