@@ -7,6 +7,18 @@ firmware and wire up Firebase. Every step below runs with no credentials.
 
 ## 1. Backend
 
+Run the backend launcher from the repository root, which automatically creates `.venv` if missing, installs dependencies, and launches uvicorn:
+
+```bash
+# macOS / Linux:
+./scripts/run_backend.sh
+
+# Windows (PowerShell):
+.\scripts\run_backend.ps1
+```
+
+Alternatively, set up and run manually:
+
 ```bash
 cd rfid_system/backend
 python -m venv .venv
